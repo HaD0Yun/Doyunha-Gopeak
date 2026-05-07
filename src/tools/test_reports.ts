@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { join, resolve } from 'node:path';
 
 const TEST_RUNS_SUBDIR = '.gopeak/test-runs';
@@ -49,10 +50,8 @@ function ensureDir(dir: string): void {
 }
 
 export function generateRunId(): string {
-  const now = new Date();
-  const ts = now.toISOString().replace(/[:.]/g, '-').replace('Z', '');
-  const rand = Math.random().toString(36).slice(2, 8);
-  return `${ts}-${rand}`;
+  const ts = new Date().toISOString().replace(/[:.]/g, '-').replace('Z', '');
+  return `${ts}-${randomUUID().slice(0, 8)}`;
 }
 
 export function writeTestRun(projectPath: string, record: TestRunRecord): string {

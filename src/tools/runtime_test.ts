@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve as resolvePath } from 'node:path';
+import { isAbsolute, relative as relativePath, resolve as resolvePath } from 'node:path';
 import { compareImages, type CompareOptions, type RegionRect } from './image_diff.js';
 import {
   generateRunId,
@@ -261,6 +261,17 @@ export async function handleAssertNodeState(args: any, deps: ToolDeps): Promise<
     description: typeof e?.description === 'string' ? e.description : undefined,
   }));
 
+  const opsRequiringProperty: AssertOp[] = ['eq', 'neq', 'lt', 'lte', 'gt', 'gte', 'in', 'regex', 'truthy', 'falsy'];
+  const missingProperty = expectations.findIndex(
+    (e) => opsRequiringProperty.includes(e.op) && !e.property,
+  );
+  if (missingProperty !== -1) {
+    const bad = expectations[missingProperty];
+    return errorResponse(
+      `assert_node_state expectation #${missingProperty} with op '${bad.op}' requires a 'property' field.`,
+    );
+  }
+
   const propsToQuery = expectations.filter((e) => e.property && e.op !== 'exists' && e.op !== 'not_exists').map((e) => e.property!);
   const uniqueProps = Array.from(new Set(propsToQuery));
 
@@ -307,10 +318,9 @@ export async function handleAssertScreenText(args: any, deps: ToolDeps): Promise
   const text = asString(args?.text);
   if (!text) return errorResponse('assert_screen_text requires `text`.');
   const caseSensitive = args?.case_sensitive === true;
-  const useOcr = process.env.GOPEAK_ENABLE_OCR === '1' && args?.ocr === true;
 
-  if (useOcr) {
-    return errorResponse('OCR mode requested but OCR backend is not bundled in this build. Disable `ocr` or build with OCR enabled.');
+  if (args?.ocr === true) {
+    return errorResponse('OCR mode is not bundled in this build. Disable `ocr` to fall back to scene-graph label scanning.');
   }
 
   const params: Record<string, unknown> = {};
@@ -338,6 +348,24 @@ export async function handleAssertScreenText(args: any, deps: ToolDeps): Promise
 }
 
 // ---------- compare_screenshots ----------
+function resolveProjectFile(projectPath: string | null, inputPath: string): string {
+  if (!projectPath) {
+    throw new Error('Image path requires a project path. Set a Godot project path or pass base64 data.');
+  }
+  if (isAbsolute(inputPath)) {
+    throw new Error('Image path must be relative to the project directory.');
+  }
+  if (inputPath.split(/[\\/]/).some((seg) => seg === '..')) {
+    throw new Error('Image path may not contain ".." segments.');
+  }
+  const abs = resolvePath(projectPath, inputPath);
+  const rel = relativePath(projectPath, abs);
+  if (rel.startsWith('..') || isAbsolute(rel)) {
+    throw new Error('Image path escapes the project directory.');
+  }
+  return abs;
+}
+
 async function loadPngFromArg(value: any, projectPath: string | null): Promise<{ buffer: Buffer; source: string }> {
   if (typeof value === 'string') {
     // base64 png data URI or raw base64 string
@@ -350,14 +378,13 @@ async function loadPngFromArg(value: any, projectPath: string | null): Promise<{
         return { buffer: buf, source: 'base64' };
       }
     }
-    // otherwise treat as path
-    const abs = resolvePath(projectPath ?? '.', value);
+    const abs = resolveProjectFile(projectPath, value);
     if (!existsSync(abs)) throw new Error(`Image file not found: ${value}`);
     return { buffer: readFileSync(abs), source: abs };
   }
   if (value && typeof value === 'object') {
     if (typeof value.path === 'string') {
-      const abs = resolvePath(projectPath ?? '.', value.path);
+      const abs = resolveProjectFile(projectPath, value.path);
       if (!existsSync(abs)) throw new Error(`Image file not found: ${value.path}`);
       return { buffer: readFileSync(abs), source: abs };
     }

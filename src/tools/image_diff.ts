@@ -24,6 +24,8 @@ export interface CompareResult {
   pixelMatchRatio: number;
   pass: boolean;
   region: RegionRect | null;
+  reason?: string;
+  dimensions?: { a: { width: number; height: number }; b: { width: number; height: number } };
 }
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -83,7 +85,7 @@ export function decodePng(input: Buffer | Uint8Array): DecodedImage {
   } else if (ihdr.colorType === 6) {
     channels = 4;
   } else {
-    throw new Error(`Unsupported PNG color type ${ihdr.colorType}; only RGB(6) and RGBA(2) supported.`);
+    throw new Error(`Unsupported PNG color type ${ihdr.colorType}; only RGB(2) and RGBA(6) supported.`);
   }
 
   const compressed = Buffer.concat(idatChunks);
@@ -249,11 +251,27 @@ export function compareImages(
   const a = typeof aPng === 'string' ? decodeBase64Png(aPng) : decodePng(aPng);
   const b = typeof bPng === 'string' ? decodeBase64Png(bPng) : decodePng(bPng);
 
+  const tolerance = options.tolerance ?? 0.05;
+
   if (a.width !== b.width || a.height !== b.height) {
-    throw new Error(`Image dimensions differ: ${a.width}x${a.height} vs ${b.width}x${b.height}.`);
+    return {
+      width: a.width,
+      height: a.height,
+      hashDistance: -1,
+      hashSimilarity: 0,
+      tileMeanDiff: 1,
+      maxTileDiff: 1,
+      pixelMatchRatio: 0,
+      pass: false,
+      region: options.region ?? null,
+      reason: 'size_mismatch',
+      dimensions: {
+        a: { width: a.width, height: a.height },
+        b: { width: b.width, height: b.height },
+      },
+    };
   }
 
-  const tolerance = options.tolerance ?? 0.05;
   const hashSize = Math.max(2, Math.min(16, options.hashSize ?? 8));
   const tileGrid = Math.max(2, Math.min(64, options.tileGrid ?? 16));
 
