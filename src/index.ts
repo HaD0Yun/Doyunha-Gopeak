@@ -39,6 +39,26 @@ import { buildToolDefinitions as buildToolDefinitionsForServer } from './tool-de
 import { CORE_TOOL_GROUPS, TOOL_GROUPS } from './tool-groups.js';
 import { DEBUG_MODE, GODOT_DEBUG_MODE_DEFAULT, SERVER_VERSION } from './server-version.js';
 import type { GodotProcess, GodotServerConfig, MCPToolDefinition, OperationParams } from './server-types.js';
+import {
+  handleAssertNodeState,
+  handleAssertScreenText,
+  handleBatchGetProperties,
+  handleCaptureFrames,
+  handleClickButtonByText,
+  handleCompareScreenshots,
+  handleFindUiElements,
+  handleGetEditorScreenshot,
+  handleGetPerformanceMonitors,
+  handleGetTestReport,
+  handleMonitorProperties,
+  handleReplayRecording,
+  handleRunStressTest,
+  handleRunTestScenario,
+  handleStartRecording,
+  handleStopRecording,
+  handleWaitForNode,
+  type ToolDeps as RuntimeTestToolDeps,
+} from './tools/runtime_test.js';
 
 const execAsync = promisify(exec);
 
@@ -534,6 +554,13 @@ class GodotServer {
     if (this.godotBridge) {
       void this.godotBridge.stop().catch(() => {});
     }
+  }
+
+  private getRuntimeTestDeps(): RuntimeTestToolDeps {
+    return {
+      runtimeCommand: (cmd, params) => this.handleRuntimeCommand(cmd, params) as Promise<any>,
+      getProjectPath: () => this.lastProjectPath,
+    };
   }
 
   private async handleRuntimeCommand(
@@ -1663,6 +1690,41 @@ class GodotServer {
           return await this.handleRuntimeCommand('inject_mouse_click', request.params.arguments);
         case 'inject_mouse_motion':
           return await this.handleRuntimeCommand('inject_mouse_motion', request.params.arguments);
+        // Phase 1 closed-loop runtime testing tools
+        case 'wait_for_node':
+          return await handleWaitForNode(request.params.arguments, this.getRuntimeTestDeps());
+        case 'monitor_properties':
+          return await handleMonitorProperties(request.params.arguments, this.getRuntimeTestDeps());
+        case 'batch_get_properties':
+          return await handleBatchGetProperties(request.params.arguments, this.getRuntimeTestDeps());
+        case 'find_ui_elements':
+          return await handleFindUiElements(request.params.arguments, this.getRuntimeTestDeps());
+        case 'click_button_by_text':
+          return await handleClickButtonByText(request.params.arguments, this.getRuntimeTestDeps());
+        case 'assert_node_state':
+          return await handleAssertNodeState(request.params.arguments, this.getRuntimeTestDeps());
+        case 'assert_screen_text':
+          return await handleAssertScreenText(request.params.arguments, this.getRuntimeTestDeps());
+        case 'compare_screenshots':
+          return await handleCompareScreenshots(request.params.arguments, this.getRuntimeTestDeps());
+        case 'capture_frames':
+          return await handleCaptureFrames(request.params.arguments, this.getRuntimeTestDeps());
+        case 'get_editor_screenshot':
+          return await handleGetEditorScreenshot(request.params.arguments, this.getRuntimeTestDeps());
+        case 'start_recording':
+          return await handleStartRecording(request.params.arguments, this.getRuntimeTestDeps());
+        case 'stop_recording':
+          return await handleStopRecording(request.params.arguments, this.getRuntimeTestDeps());
+        case 'replay_recording':
+          return await handleReplayRecording(request.params.arguments, this.getRuntimeTestDeps());
+        case 'run_test_scenario':
+          return await handleRunTestScenario(request.params.arguments, this.getRuntimeTestDeps());
+        case 'run_stress_test':
+          return await handleRunStressTest(request.params.arguments, this.getRuntimeTestDeps());
+        case 'get_test_report':
+          return await handleGetTestReport(request.params.arguments, this.getRuntimeTestDeps());
+        case 'get_performance_monitors':
+          return await handleGetPerformanceMonitors(request.params.arguments, this.getRuntimeTestDeps());
         case 'lsp_get_diagnostics':
         case 'lsp_get_completions':
         case 'lsp_get_hover':

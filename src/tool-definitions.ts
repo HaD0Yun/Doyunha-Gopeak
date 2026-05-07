@@ -2235,6 +2235,275 @@ export function buildToolDefinitions(godotBridgePort: number): MCPToolDefinition
             required: ['x', 'y'],
           },
         },
+        // Runtime Test Tools (Phase 1: AI-Run closed loop) — runtime addon TCP port 7777
+        {
+          name: 'wait_for_node',
+          description: 'Wait for a node to exist (and optionally be visible) at a NodePath, polling the running game until the node appears or `timeout_ms` elapses. Use as the first step before injecting input or asserting state. Requires runtime addon.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              path: { type: 'string', description: 'NodePath to wait for (e.g., "/root/Main/UI/StartButton")' },
+              timeout_ms: { type: 'number', description: 'Total time to wait in milliseconds. Default: 5000. Range: 0-60000.' },
+              interval_ms: { type: 'number', description: 'Poll interval in milliseconds. Default: 100. Range: 16-5000.' },
+              require_visible: { type: 'boolean', description: 'Require the node to be visible (CanvasItem.visible) in addition to existing. Default: false.' },
+            },
+            required: ['path'],
+          },
+        },
+        {
+          name: 'monitor_properties',
+          description: 'Sample a node\'s properties at a fixed rate over a short window and return a time-series of values. Use to verify animations, transitions, or timed state changes. Synchronous — caller blocks for `duration_ms`.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              path: { type: 'string', description: 'NodePath to monitor.' },
+              properties: { type: 'array', items: { type: 'string' }, description: 'Property names to sample each tick.' },
+              duration_ms: { type: 'number', description: 'Total sampling window. Default 1000. Range 16-10000.' },
+              sample_rate_hz: { type: 'number', description: 'Samples per second. Default 30. Range 1-120.' },
+            },
+            required: ['path', 'properties'],
+          },
+        },
+        {
+          name: 'batch_get_properties',
+          description: 'Read multiple properties from multiple nodes in a single round-trip. Returns {path, found, properties, errors} per query.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              queries: {
+                type: 'array',
+                description: 'Array of {path, properties[]} queries.',
+                items: {
+                  type: 'object',
+                  properties: {
+                    path: { type: 'string' },
+                    properties: { type: 'array', items: { type: 'string' } },
+                  },
+                  required: ['path', 'properties'],
+                },
+              },
+            },
+            required: ['queries'],
+          },
+        },
+        {
+          name: 'find_ui_elements',
+          description: 'Search the live scene tree for Control nodes (Button, Label, LineEdit, etc.) matching text, type, or name. Returns matches with path, type, text, and visibility.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              text: { type: 'string', description: 'Match against node text/title/placeholder.' },
+              type: { type: 'string', description: 'Filter by node class (e.g., "Button", "Label").' },
+              name: { type: 'string', description: 'Filter by node name.' },
+              root: { type: 'string', description: 'Search root NodePath. Default: scene root.' },
+              case_sensitive: { type: 'boolean', description: 'Default: false.' },
+              match_substring: { type: 'boolean', description: 'Substring match instead of exact. Default: true.' },
+              max_results: { type: 'number', description: 'Cap results. Default 100. Range 1-1000.' },
+            },
+          },
+        },
+        {
+          name: 'click_button_by_text',
+          description: 'Find a Button (or BaseButton) in the running game by its visible text and emit its `pressed` signal. Reliable in headless contexts where coordinate clicks would miss.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              text: { type: 'string', description: 'Button text to match.' },
+              case_sensitive: { type: 'boolean', description: 'Default: false.' },
+              match_substring: { type: 'boolean', description: 'Default: true.' },
+              root: { type: 'string', description: 'Search root NodePath. Default: scene root.' },
+              index: { type: 'number', description: 'If multiple matches, pick this index (0-based). Default: 0.' },
+            },
+            required: ['text'],
+          },
+        },
+        {
+          name: 'assert_node_state',
+          description: 'Assert that a node\'s properties satisfy expectations. Each expectation is {property, op, value} where op is one of eq, neq, lt, lte, gt, gte, in, regex, exists, not_exists, truthy, falsy. Returns {passed, results[]}.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              path: { type: 'string', description: 'NodePath to check.' },
+              expectations: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    property: { type: 'string' },
+                    op: { type: 'string', enum: ['eq', 'neq', 'lt', 'lte', 'gt', 'gte', 'in', 'regex', 'exists', 'not_exists', 'truthy', 'falsy'] },
+                    value: {},
+                    description: { type: 'string' },
+                  },
+                  required: ['op'],
+                },
+              },
+            },
+            required: ['path', 'expectations'],
+          },
+        },
+        {
+          name: 'assert_screen_text',
+          description: 'Assert that a string is visible in the running game by scanning Label/RichTextLabel/Button text. Returns matches with their NodePaths. Set `ocr: true` (and GOPEAK_ENABLE_OCR=1) to use pixel OCR — not bundled by default.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              text: { type: 'string', description: 'Text to search for.' },
+              case_sensitive: { type: 'boolean', description: 'Default: false.' },
+              root: { type: 'string', description: 'Search root NodePath. Default: scene root.' },
+              ocr: { type: 'boolean', description: 'Use pixel OCR rather than label scan. Requires GOPEAK_ENABLE_OCR=1. Default: false.' },
+            },
+            required: ['text'],
+          },
+        },
+        {
+          name: 'compare_screenshots',
+          description: 'Compare two PNG images using perceptual hash + per-tile mean diff. Returns {pass, hashSimilarity, tileMeanDiff, ...}. Inputs may be base64 strings, file paths (relative to project), or {path|base64} objects.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              a: { description: 'First image: base64 PNG, project-relative path, or {path|base64}.' },
+              b: { description: 'Second image: base64 PNG, project-relative path, or {path|base64}.' },
+              tolerance: { type: 'number', description: 'Max acceptable tile mean diff (0–1). Default 0.05.' },
+              hash_size: { type: 'number', description: 'Average-hash side length (default 8 → 64 bits). Range 2-16.' },
+              tile_grid: { type: 'number', description: 'Grid size for per-tile diff. Default 16. Range 2-64.' },
+              region: {
+                type: 'object',
+                description: 'Optional ROI {x, y, width, height} applied to both images.',
+                properties: {
+                  x: { type: 'number' },
+                  y: { type: 'number' },
+                  width: { type: 'number' },
+                  height: { type: 'number' },
+                },
+              },
+            },
+            required: ['a', 'b'],
+          },
+        },
+        {
+          name: 'capture_frames',
+          description: 'Capture a short burst of consecutive frames from the running game (1-30 frames) at a fixed interval. Returns base64 PNG array. Useful for animation/regression checks.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              count: { type: 'number', description: 'Number of frames. Default 5. Range 1-30.' },
+              interval_ms: { type: 'number', description: 'Delay between frames (ms). Default 100. Range 0-1000.' },
+              width: { type: 'number', description: 'Optional resize width.' },
+              height: { type: 'number', description: 'Optional resize height.' },
+            },
+          },
+        },
+        {
+          name: 'get_editor_screenshot',
+          description: 'Capture a screenshot of the Godot editor window (not the running game). Currently returns an informative error — use capture_screenshot for the running game viewport.',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+          },
+        },
+        {
+          name: 'start_recording',
+          description: 'Begin recording all InputEvents reaching the running game until stop_recording is called. Recordings are stored in-memory keyed by `name` and can be replayed via replay_recording.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Recording name. Default: "default".' },
+              mode: { type: 'string', enum: ['frame_locked', 'realtime'], description: 'Replay timing mode. Default: frame_locked.' },
+            },
+          },
+        },
+        {
+          name: 'stop_recording',
+          description: 'Stop the active input recording and return its event count and duration.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Recording name to stop. Default: active recording.' },
+            },
+          },
+        },
+        {
+          name: 'replay_recording',
+          description: 'Replay a previously captured input recording into the running game. Frame-locked mode reproduces events at the same Engine.process_frames offsets; realtime mode uses wall-clock ms timestamps.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Recording name to replay.' },
+              mode: { type: 'string', enum: ['frame_locked', 'realtime'], description: 'Override the recording\'s mode.' },
+              speed: { type: 'number', description: 'Playback speed multiplier (realtime mode only). Default 1.0. Range 0.1-10.' },
+            },
+            required: ['name'],
+          },
+        },
+        {
+          name: 'get_performance_monitors',
+          description: 'Read named Performance monitors from the running game (FPS, memory, render_total_objects_in_frame, etc.). Pass `monitors` array to filter; otherwise returns the standard set.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              monitors: { type: 'array', items: { type: 'string' }, description: 'Monitor names. If omitted, returns a default set.' },
+            },
+          },
+        },
+        {
+          name: 'run_test_scenario',
+          description: 'Execute a multi-step test scenario {setup, steps, asserts, teardown} against the running game. Each step invokes a runtime command (e.g., wait_for_node, click_button_by_text, inject_key) and asserts verify final state. Persists a TestRunRecord under .gopeak/test-runs/ and returns its id + summary.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Optional scenario name for the report.' },
+              setup: { type: 'array', items: { type: 'object' }, description: 'Steps to run before main steps.' },
+              steps: {
+                type: 'array',
+                description: 'Ordered steps. Each: {type, args, optional?, description?}. Supported types: wait_ms, wait_for_node, click_button_by_text, find_ui_elements, replay_recording, monitor_properties, capture_frames, capture_screenshot, capture_viewport, inject_action, inject_key, inject_mouse_click, inject_mouse_motion, set_property, call_method, get_property, get_tree, get_metrics, get_engine_state, get_performance_monitors, get_label_texts.',
+                items: { type: 'object' },
+              },
+              asserts: {
+                type: 'array',
+                description: 'Assertions evaluated after steps. Each: {type, ...}. Supported types: assert_node_state, assert_screen_text, assert_property, assert_image_match.',
+                items: { type: 'object' },
+              },
+              teardown: { type: 'array', items: { type: 'object' }, description: 'Steps to run after asserts (always runs).' },
+              metadata: { type: 'object', description: 'Free-form metadata persisted with the report.' },
+              notes: { type: 'string', description: 'Free-form notes persisted with the report.' },
+            },
+            required: ['steps'],
+          },
+        },
+        {
+          name: 'run_stress_test',
+          description: 'Inject a seeded random sequence of inputs into the running game for `duration_ms` and report any failed runtime commands. Destructive — pass `confirm_destructive: true`. Persists a TestRunRecord.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              confirm_destructive: { type: 'boolean', description: 'Required: must be true to run. The fuzzer can trigger arbitrary in-game actions.' },
+              seed: { type: 'number', description: 'RNG seed for deterministic replay. Default: random.' },
+              duration_ms: { type: 'number', description: 'Total fuzz duration. Default 5000. Range 100-120000.' },
+              interval_ms: { type: 'number', description: 'Delay between injections. Default 50. Range 16-1000.' },
+              action_set: {
+                type: 'array',
+                items: { type: 'string', enum: ['inject_key', 'inject_mouse_motion', 'inject_mouse_click', 'inject_action'] },
+                description: 'Subset of input types to fuzz with. Default: all four.',
+              },
+              viewport_width: { type: 'number', description: 'Used to bound mouse coordinates. Default 1280.' },
+              viewport_height: { type: 'number', description: 'Used to bound mouse coordinates. Default 720.' },
+              name: { type: 'string', description: 'Optional report scenarioName.' },
+            },
+            required: ['confirm_destructive'],
+          },
+        },
+        {
+          name: 'get_test_report',
+          description: 'Read a persisted run_test_scenario / run_stress_test report from .gopeak/test-runs/. Pass `run_id` for a specific run, `latest: true` for the most recent, or omit both to list runs (capped by `limit`).',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              run_id: { type: 'string', description: 'Run id (matches the JSON filename).' },
+              latest: { type: 'boolean', description: 'Return the most recent run instead of a list.' },
+              limit: { type: 'number', description: 'Max runs to list when neither run_id nor latest is set. Default 20.' },
+            },
+          },
+        },
         // Editor Plugin Bridge Status
         {
           name: 'get_editor_status',

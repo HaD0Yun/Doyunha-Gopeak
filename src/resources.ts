@@ -6,12 +6,19 @@ import {
   ListResourceTemplatesRequestSchema,
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import { listTestRuns, readTestRunRaw } from './tools/test_reports.js';
 
 const STATIC_RESOURCES = [
   {
     uri: 'godot://project/info',
     name: 'Project Info',
     description: 'Parsed Godot project.godot metadata as JSON.',
+    mimeType: 'application/json',
+  },
+  {
+    uri: 'godot://test-runs',
+    name: 'Test Runs Index',
+    description: 'List of test scenario runs persisted under .gopeak/test-runs/.',
     mimeType: 'application/json',
   },
 ];
@@ -35,10 +42,18 @@ const RESOURCE_TEMPLATES = [
     description: 'Read a project resource file (.tres, .tscn, .gd).',
     mimeType: 'text/plain',
   },
+  {
+    uriTemplate: 'godot://test-run/{id}',
+    name: 'Test Run Record',
+    description: 'A persisted run_test_scenario JSON report under .gopeak/test-runs/.',
+    mimeType: 'application/json',
+  },
 ];
 
 type ParsedGodotUri =
   | { kind: 'project-info' }
+  | { kind: 'test-runs' }
+  | { kind: 'test-run'; id: string }
   | { kind: 'scene' | 'script' | 'resource'; resourcePath: string };
 
 function ensureProjectPath(getProjectPath: () => string | null): string {
@@ -83,6 +98,9 @@ function parseGodotUri(uri: string): ParsedGodotUri {
   if (uri === 'godot://project/info') {
     return { kind: 'project-info' };
   }
+  if (uri === 'godot://test-runs') {
+    return { kind: 'test-runs' };
+  }
 
   let parsed: URL;
   try {
@@ -96,6 +114,13 @@ function parseGodotUri(uri: string): ParsedGodotUri {
   }
 
   const host = parsed.hostname;
+  if (host === 'test-run') {
+    const id = decodeURIComponent(parsed.pathname).replace(/^\/+/, '').trim();
+    if (!id || id.includes('/') || id.includes('\\') || id.includes('..')) {
+      throw new Error('Invalid test-run id.');
+    }
+    return { kind: 'test-run', id };
+  }
   if (host !== 'scene' && host !== 'script' && host !== 'resource') {
     throw new Error(`Unsupported Godot resource type: ${host}`);
   }
@@ -195,6 +220,20 @@ function readResourceText(uri: string, getProjectPath: () => string | null): { m
       mimeType: 'application/json',
       text: JSON.stringify(parsedProject, null, 2),
     };
+  }
+
+  if (parsedUri.kind === 'test-runs') {
+    const runs = listTestRuns(projectPath).map((entry) => ({
+      id: entry.id,
+      uri: `godot://test-run/${entry.id}`,
+      mtime: entry.mtime,
+      size: entry.size,
+    }));
+    return { mimeType: 'application/json', text: JSON.stringify({ runs }, null, 2) };
+  }
+
+  if (parsedUri.kind === 'test-run') {
+    return readTestRunRaw(projectPath, parsedUri.id);
   }
 
   const filePath = resolveProjectFile(projectPath, parsedUri.resourcePath);
