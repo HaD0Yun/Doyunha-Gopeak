@@ -2215,6 +2215,133 @@ export function buildToolDefinitions(godotBridgePort: number): MCPToolDefinition
             required: ['projectPath'],
           },
         },
+        // ==================== SCENE PARTICLES TOOLS (Phase 2) ====================
+        {
+          name: 'create_particles',
+          description: 'Creates GPUParticles3D, CPUParticles3D, GPUParticles2D, or CPUParticles2D node with a process material. Use to add particle systems to scenes.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot. Use the same path across all tool calls in a workflow.' },
+              scenePath: { type: 'string', description: 'Path to the scene file' },
+              parentNodePath: { type: 'string', description: 'Path to the parent node' },
+              nodeName: { type: 'string', description: 'Name for the particles node' },
+              particleType: { type: 'string', enum: ['GPUParticles3D', 'CPUParticles3D', 'GPUParticles2D', 'CPUParticles2D'], description: 'Type of particle node to create' },
+              emissionShape: { type: 'string', enum: ['sphere', 'box', 'ring', 'point'], description: 'Particle emission shape' },
+              amount: { type: 'number', description: 'Number of particles (default: 100)' },
+              lifetime: { type: 'number', description: 'Particle lifetime in seconds (default: 1.0)' },
+              explosiveness: { type: 'number', description: 'Explosiveness ratio 0-1 for burst emission (default: 0)' },
+              processMaterialPath: { type: 'string', description: 'Path to an existing ParticleProcessMaterial resource' },
+              drawPassPath: { type: 'string', description: 'Path to a mesh (3D) or texture (2D) for the draw pass' },
+              position: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, description: 'Node position as Vector3 (for 3D) or Vector2 (for 2D)' },
+              rotation: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, description: 'Node rotation in degrees as Vector3' },
+              direction: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, description: 'Initial direction vector as Vector3' },
+              gravity: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, description: 'Gravity vector as Vector3' },
+              spread: { type: 'number', description: 'Spread angle in degrees (default: 45)' },
+              initialVelocity: {
+                type: 'object',
+                properties: {
+                  min: { type: 'number' },
+                  max: { type: 'number' },
+                },
+                description: 'Initial velocity range (min/max)',
+              },
+            },
+            required: ['projectPath', 'scenePath', 'parentNodePath', 'nodeName', 'particleType'],
+          },
+        },
+        {
+          name: 'set_particle_material',
+          description: 'Configures the ParticleProcessMaterial on a particles node. Use to set colors, velocity, gravity, and other particle properties.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot. Use the same path across all tool calls in a workflow.' },
+              scenePath: { type: 'string', description: 'Path to the scene file' },
+              nodePath: { type: 'string', description: 'Path to the particles node' },
+              processMaterialPath: { type: 'string', description: 'Path to an existing ParticleProcessMaterial to start from' },
+              materialProperties: {
+                type: 'object',
+                properties: {
+                  color: { type: 'object', properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } }, description: 'Particle color as RGBA' },
+                  colorRamp: { type: 'string', description: 'Path to a GradientTexture1D for color gradient' },
+                  initialVelocityMin: { type: 'number', description: 'Minimum initial velocity' },
+                  initialVelocityMax: { type: 'number', description: 'Maximum initial velocity' },
+                  gravity: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, description: 'Gravity vector' },
+                  acceleration: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, description: 'Linear acceleration vector' },
+                  damping: { type: 'number', description: 'Damping/friction value' },
+                  scaleMin: { type: 'number', description: 'Minimum scale' },
+                  scaleMax: { type: 'number', description: 'Maximum scale' },
+                  hueVariationMin: { type: 'number', description: 'Minimum hue variation' },
+                  hueVariationMax: { type: 'number', description: 'Maximum hue variation' },
+                  turbulenceEnabled: { type: 'boolean', description: 'Enable turbulence' },
+                  turbulenceNoiseStrength: { type: 'number', description: 'Turbulence noise strength' },
+                },
+                description: 'Inline process material property overrides',
+              },
+              saveAsResourcePath: { type: 'string', description: 'Optional .tres path to save the resulting material as a named resource' },
+            },
+            required: ['projectPath', 'scenePath', 'nodePath'],
+          },
+        },
+        {
+          name: 'set_particle_color_gradient',
+          description: 'Sets a color gradient on a particle system by creating a GradientTexture1D. Use to create multi-color particle effects.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot. Use the same path across all tool calls in a workflow.' },
+              scenePath: { type: 'string', description: 'Path to the scene file' },
+              nodePath: { type: 'string', description: 'Path to the particles node' },
+              gradientPath: { type: 'string', description: 'Path to an existing Gradient resource to use as base' },
+              colors: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    point: { type: 'number', description: 'Gradient point position (0-1)' },
+                    color: { type: 'object', properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } }, description: 'Color at this point' },
+                  },
+                },
+                description: 'Array of gradient points with color values',
+              },
+              saveAsResourcePath: { type: 'string', description: 'Optional .tres path to save the gradient texture as a named resource' },
+            },
+            required: ['projectPath', 'scenePath', 'nodePath'],
+          },
+        },
+        {
+          name: 'apply_particle_preset',
+          description: 'Applies a pre-configured particle preset (fire, smoke, snow, explosion, etc.) to quickly add common particle effects.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot. Use the same path across all tool calls in a workflow.' },
+              scenePath: { type: 'string', description: 'Path to the scene file' },
+              parentNodePath: { type: 'string', description: 'Path to the parent node' },
+              nodeName: { type: 'string', description: 'Name for the particles node' },
+              preset: {
+                type: 'string',
+                enum: ['fire', 'smoke', 'snow', 'explosion', 'sparks', 'rain', 'magic_dust', '2d_fire', '2d_snow', '2d_confetti'],
+                description: 'Preset to apply',
+              },
+            },
+            required: ['projectPath', 'scenePath', 'parentNodePath', 'nodeName', 'preset'],
+          },
+        },
+        {
+          name: 'get_particle_info',
+          description: 'Reads particle system configuration from a particles node. Returns type, amount, lifetime, process material properties, and texture info.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot. Use the same path across all tool calls in a workflow.' },
+              scenePath: { type: 'string', description: 'Path to the scene file' },
+              nodePath: { type: 'string', description: 'Path to the particles node' },
+            },
+            required: ['projectPath', 'scenePath', 'nodePath'],
+          },
+        },
         // ==================== UI/THEME TOOLS ====================
         {
           name: 'set_theme_color',

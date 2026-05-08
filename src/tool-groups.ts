@@ -16,6 +16,11 @@ export const TOOL_GROUPS: Record<string, ToolGroupDefinition> = {
     tools: ['setup_collision', 'setup_physics_body', 'add_raycast', 'set_physics_layers', 'get_physics_layers', 'get_collision_info'],
     keywords: ['physics', 'collision', 'collision shape', 'physics body', 'static body', 'rigid body', 'character body', 'raycast', 'physics layers', 'collision layer', 'collision mask'],
   },
+  scene_particles: {
+    description: 'Particle system scaffolding (create, configure, presets, color gradients)',
+    tools: ['create_particles', 'set_particle_material', 'set_particle_color_gradient', 'apply_particle_preset', 'get_particle_info'],
+    keywords: ['particles', 'particle system', 'GPUParticles', 'CPUParticles', 'fire', 'smoke', 'snow', 'explosion', 'sparks', 'rain', 'confetti', 'color gradient', 'color ramp', 'particle preset'],
+  },
   uid: {
     description: 'UID management for resources',
     tools: ['get_uid', 'update_project_uids'],

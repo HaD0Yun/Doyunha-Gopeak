@@ -1679,6 +1679,17 @@ class GodotServer {
           return await this.handleViaBridge('get_physics_layers', normalizedArgs);
         case 'get_collision_info':
           return await this.handleViaBridge('get_collision_info', normalizedArgs);
+        // Phase 2 — scene_particles scaffolding tools.
+        case 'create_particles':
+          return await this.handleViaBridge('create_particles', normalizedArgs);
+        case 'set_particle_material':
+          return await this.handleViaBridge('set_particle_material', normalizedArgs);
+        case 'set_particle_color_gradient':
+          return await this.handleViaBridge('set_particle_color_gradient', normalizedArgs);
+        case 'apply_particle_preset':
+          return await this.handleViaBridge('apply_particle_preset', normalizedArgs);
+        case 'get_particle_info':
+          return await this.handleViaBridge('get_particle_info', normalizedArgs);
         // UI/Theme Tools handlers
         case 'set_theme_color':
           return await this.handleViaBridge('set_theme_color', normalizedArgs);

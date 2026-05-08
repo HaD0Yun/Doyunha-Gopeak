@@ -153,13 +153,13 @@ instead of dozens of `add_node` + `set_node_properties` calls.
   - [x] smoke test (scene_physics coverage) — Task B8
 
 - Particles group:
-  - [ ] scaffolding — Task C1
-  - [ ] `create_particles` — Task C2
-  - [ ] `set_particle_material` — Task C3
-  - [ ] `set_particle_color_gradient` — Task C4
-  - [ ] `apply_particle_preset` — Task C5
-  - [ ] `get_particle_info` — Task C6
-  - [ ] smoke test (scene_particles coverage) — Task C7
+  - [x] scaffolding — Task C1
+  - [x] `create_particles` — Task C2
+  - [x] `set_particle_material` — Task C3
+  - [x] `set_particle_color_gradient` — Task C4
+  - [x] `apply_particle_preset` — Task C5
+  - [x] `get_particle_info` — Task C6
+  - [x] smoke test (scene_particles coverage) — Task C7
 
 **Where it lives:**
 - [x] Bridge-backed scene edits via `src/addon/godot_mcp_editor/tools/scene_3d_tools.gd`

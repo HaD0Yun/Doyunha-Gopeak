@@ -9,6 +9,7 @@ var _resource_tools: Node = null
 var _animation_tools: Node = null
 var _scene_3d_tools: Node = null
 var _scene_physics_tools: Node = null
+var _scene_particles_tools: Node = null
 
 var _tool_map: Dictionary = {}
 var _initialized := false
@@ -28,6 +29,8 @@ func set_editor_plugin(plugin: EditorPlugin) -> void:
 		_scene_3d_tools.set_editor_plugin(plugin)
 	if _scene_physics_tools and _scene_physics_tools.has_method("set_editor_plugin"):
 		_scene_physics_tools.set_editor_plugin(plugin)
+	if _scene_particles_tools and _scene_particles_tools.has_method("set_editor_plugin"):
+		_scene_particles_tools.set_editor_plugin(plugin)
 
 
 func _init_tools() -> void:
@@ -41,6 +44,7 @@ func _init_tools() -> void:
 	var animation_tools_path := "%s/tools/animation_tools.gd" % base_path
 	var scene_3d_tools_path := "%s/tools/scene_3d_tools.gd" % base_path
 	var scene_physics_tools_path := "%s/tools/scene_physics_tools.gd" % base_path
+	var scene_particles_tools_path := "%s/tools/scene_particles_tools.gd" % base_path
 
 	if ResourceLoader.exists(scene_tools_path):
 		var scene_script: Script = load(scene_tools_path)
@@ -76,6 +80,13 @@ func _init_tools() -> void:
 			_scene_physics_tools = scene_physics_script.new()
 			_scene_physics_tools.name = "ScenePhysicsTools"
 			add_child(_scene_physics_tools)
+
+	if ResourceLoader.exists(scene_particles_tools_path):
+		var scene_particles_script: Script = load(scene_particles_tools_path)
+		if scene_particles_script:
+			_scene_particles_tools = scene_particles_script.new()
+			_scene_particles_tools.name = "SceneParticlesTools"
+			add_child(_scene_particles_tools)
 
 	_tool_map = {
 		# Scene tools
@@ -128,6 +139,13 @@ func _init_tools() -> void:
 		"set_physics_layers": [_scene_physics_tools, "set_physics_layers"],
 		"get_physics_layers": [_scene_physics_tools, "get_physics_layers"],
 		"get_collision_info": [_scene_physics_tools, "get_collision_info"],
+
+		# Scene Particles tools
+		"create_particles": [_scene_particles_tools, "create_particles"],
+		"set_particle_material": [_scene_particles_tools, "set_particle_material"],
+		"set_particle_color_gradient": [_scene_particles_tools, "set_particle_color_gradient"],
+		"apply_particle_preset": [_scene_particles_tools, "apply_particle_preset"],
+		"get_particle_info": [_scene_particles_tools, "get_particle_info"],
 	}
 
 
