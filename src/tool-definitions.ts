@@ -2123,6 +2123,98 @@ export function buildToolDefinitions(godotBridgePort: number): MCPToolDefinition
             required: ['projectPath', 'scenePath', 'parentNodePath', 'nodeName'],
           },
         },
+        // ==================== SCENE PHYSICS TOOLS (Phase 2) ====================
+        {
+          name: 'setup_collision',
+          description: 'Creates a CollisionShape2D or CollisionShape3D. Use to add physics shapes to bodies or areas.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Path to the scene file' },
+              parentNodePath: { type: 'string', description: 'Path to the parent node (e.g., a PhysicsBody or Area)' },
+              nodeName: { type: 'string', description: 'Name for the collision node' },
+              shapeType: { type: 'string', enum: ['box', 'sphere', 'capsule', 'cylinder', 'world_boundary'], description: 'Type of collision shape. cylinder is 3D-only; box/sphere/capsule/world_boundary work for both 2D and 3D.' },
+              is3D: { type: 'boolean', description: 'If true, creates 3D collision node. Default: false (2D)' },
+              size: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, description: 'Size for box shape' },
+              radius: { type: 'number', description: 'Radius for sphere/capsule/cylinder shapes' },
+              height: { type: 'number', description: 'Height for capsule/cylinder shapes' },
+            },
+            required: ['projectPath', 'scenePath', 'parentNodePath', 'nodeName', 'shapeType'],
+          },
+        },
+        {
+          name: 'setup_physics_body',
+          description: 'Creates a StaticBody, RigidBody, CharacterBody, or Area node. Use to add physical objects or trigger zones. The body is created without a shape — call `setup_collision` with this body as parentNodePath to attach a CollisionShape.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Path to the scene file' },
+              parentNodePath: { type: 'string', description: 'Path to the parent node' },
+              nodeName: { type: 'string', description: 'Name for the physics body' },
+              bodyType: { type: 'string', enum: ['static', 'rigid', 'character', 'area'], description: 'Type of physics body' },
+              is3D: { type: 'boolean', description: 'If true, creates 3D physics node. Default: false (2D)' },
+            },
+            required: ['projectPath', 'scenePath', 'parentNodePath', 'nodeName', 'bodyType'],
+          },
+        },
+        {
+          name: 'add_raycast',
+          description: 'Creates a RayCast2D or RayCast3D node. Use for line-of-sight checks, ground detection, or hitscan weapons.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Path to the scene file' },
+              parentNodePath: { type: 'string', description: 'Path to the parent node' },
+              nodeName: { type: 'string', description: 'Name for the RayCast node' },
+              is3D: { type: 'boolean', description: 'If true, creates RayCast3D. Default: false (2D)' },
+              targetPosition: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, description: 'Cast destination vector relative to origin' },
+              enabled: { type: 'boolean', description: 'Whether the RayCast is enabled. Default: true' },
+            },
+            required: ['projectPath', 'scenePath', 'parentNodePath', 'nodeName'],
+          },
+        },
+        {
+          name: 'set_physics_layers',
+          description: 'Sets collision layer and mask on a physics object. Use to configure what this object is and what it collides with.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Path to the scene file' },
+              nodePath: { type: 'string', description: 'Path to the physics node' },
+              collisionLayer: { type: 'number', description: 'Bitmask for the layers this object is ON' },
+              collisionMask: { type: 'number', description: 'Bitmask for the layers this object SCANS/COLLIDES with' },
+            },
+            required: ['projectPath', 'scenePath', 'nodePath'],
+          },
+        },
+        {
+          name: 'get_physics_layers',
+          description: 'Reads collision layer and mask from a physics object. Use to check current collision setup. If the node has no collision_layer/collision_mask (e.g. a CollisionShape rather than a body), returns ok with both fields null and a note explaining the node class.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Path to the scene file' },
+              nodePath: { type: 'string', description: 'Path to the physics node' },
+            },
+            required: ['projectPath', 'scenePath', 'nodePath'],
+          },
+        },
+        {
+          name: 'get_collision_info',
+          description: 'Returns named 2D and 3D physics layers defined in ProjectSettings. Use to understand the project\'s collision layer semantics. Returns layers2D and layers3D as objects keyed by stringified layer index ("1".."32") mapping to the configured layer name.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+            },
+            required: ['projectPath'],
+          },
+        },
         // ==================== UI/THEME TOOLS ====================
         {
           name: 'set_theme_color',

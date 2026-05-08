@@ -143,14 +143,14 @@ instead of dozens of `add_node` + `set_node_properties` calls.
   - [x] smoke test `test-build-scaffolding.mjs` (scene_3d coverage) — Task A8
 
 - Physics group:
-  - [ ] scaffolding — Task B1
-  - [ ] `setup_collision` — Task B2
-  - [ ] `setup_physics_body` — Task B3
-  - [ ] `add_raycast` — Task B4
-  - [ ] `set_physics_layers` — Task B5
-  - [ ] `get_physics_layers` — Task B6
-  - [ ] `get_collision_info` — Task B7
-  - [ ] smoke test (scene_physics coverage) — Task B8
+  - [x] scaffolding — Task B1
+  - [x] `setup_collision` — Task B2
+  - [x] `setup_physics_body` — Task B3
+  - [x] `add_raycast` — Task B4
+  - [x] `set_physics_layers` — Task B5
+  - [x] `get_physics_layers` — Task B6
+  - [x] `get_collision_info` — Task B7
+  - [x] smoke test (scene_physics coverage) — Task B8
 
 - Particles group:
   - [ ] scaffolding — Task C1

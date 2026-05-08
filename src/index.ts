@@ -1666,6 +1666,19 @@ class GodotServer {
           return await this.handleViaBridge('set_material_3d', normalizedArgs);
         case 'add_gridmap':
           return await this.handleViaBridge('add_gridmap', normalizedArgs);
+        // Phase 2 — scene_physics scaffolding tools.
+        case 'setup_collision':
+          return await this.handleViaBridge('setup_collision', normalizedArgs);
+        case 'setup_physics_body':
+          return await this.handleViaBridge('setup_physics_body', normalizedArgs);
+        case 'add_raycast':
+          return await this.handleViaBridge('add_raycast', normalizedArgs);
+        case 'set_physics_layers':
+          return await this.handleViaBridge('set_physics_layers', normalizedArgs);
+        case 'get_physics_layers':
+          return await this.handleViaBridge('get_physics_layers', normalizedArgs);
+        case 'get_collision_info':
+          return await this.handleViaBridge('get_collision_info', normalizedArgs);
         // UI/Theme Tools handlers
         case 'set_theme_color':
           return await this.handleViaBridge('set_theme_color', normalizedArgs);

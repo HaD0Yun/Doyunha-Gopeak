@@ -11,6 +11,11 @@ export const TOOL_GROUPS: Record<string, ToolGroupDefinition> = {
     tools: ['add_mesh_instance', 'setup_camera_3d', 'setup_lighting', 'setup_environment', 'set_material_3d', 'add_gridmap'],
     keywords: ['3d scene', '3d build', 'mesh instance', 'mesh', 'primitive', 'camera 3d', 'look at', 'lighting', 'directional light', 'omni light', 'spot light', 'world environment', 'sky', 'fog', 'glow', 'material 3d', 'standard material', 'gridmap', 'mesh library'],
   },
+  scene_physics: {
+    description: 'Physics scene scaffolding (collision, physics body, raycast, layers)',
+    tools: ['setup_collision', 'setup_physics_body', 'add_raycast', 'set_physics_layers', 'get_physics_layers', 'get_collision_info'],
+    keywords: ['physics', 'collision', 'collision shape', 'physics body', 'static body', 'rigid body', 'character body', 'raycast', 'physics layers', 'collision layer', 'collision mask'],
+  },
   uid: {
     description: 'UID management for resources',
     tools: ['get_uid', 'update_project_uids'],

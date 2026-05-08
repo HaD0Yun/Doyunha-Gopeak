@@ -8,6 +8,7 @@ var _scene_tools: Node = null
 var _resource_tools: Node = null
 var _animation_tools: Node = null
 var _scene_3d_tools: Node = null
+var _scene_physics_tools: Node = null
 
 var _tool_map: Dictionary = {}
 var _initialized := false
@@ -25,6 +26,8 @@ func set_editor_plugin(plugin: EditorPlugin) -> void:
 		_animation_tools.set_editor_plugin(plugin)
 	if _scene_3d_tools and _scene_3d_tools.has_method("set_editor_plugin"):
 		_scene_3d_tools.set_editor_plugin(plugin)
+	if _scene_physics_tools and _scene_physics_tools.has_method("set_editor_plugin"):
+		_scene_physics_tools.set_editor_plugin(plugin)
 
 
 func _init_tools() -> void:
@@ -37,6 +40,7 @@ func _init_tools() -> void:
 	var resource_tools_path := "%s/tools/resource_tools.gd" % base_path
 	var animation_tools_path := "%s/tools/animation_tools.gd" % base_path
 	var scene_3d_tools_path := "%s/tools/scene_3d_tools.gd" % base_path
+	var scene_physics_tools_path := "%s/tools/scene_physics_tools.gd" % base_path
 
 	if ResourceLoader.exists(scene_tools_path):
 		var scene_script: Script = load(scene_tools_path)
@@ -65,6 +69,13 @@ func _init_tools() -> void:
 			_scene_3d_tools = scene_3d_script.new()
 			_scene_3d_tools.name = "Scene3DTools"
 			add_child(_scene_3d_tools)
+
+	if ResourceLoader.exists(scene_physics_tools_path):
+		var scene_physics_script: Script = load(scene_physics_tools_path)
+		if scene_physics_script:
+			_scene_physics_tools = scene_physics_script.new()
+			_scene_physics_tools.name = "ScenePhysicsTools"
+			add_child(_scene_physics_tools)
 
 	_tool_map = {
 		# Scene tools
@@ -109,6 +120,14 @@ func _init_tools() -> void:
 		"setup_environment": [_scene_3d_tools, "setup_environment"],
 		"set_material_3d": [_scene_3d_tools, "set_material_3d"],
 		"add_gridmap": [_scene_3d_tools, "add_gridmap"],
+
+		# Scene Physics tools
+		"setup_collision": [_scene_physics_tools, "setup_collision"],
+		"setup_physics_body": [_scene_physics_tools, "setup_physics_body"],
+		"add_raycast": [_scene_physics_tools, "add_raycast"],
+		"set_physics_layers": [_scene_physics_tools, "set_physics_layers"],
+		"get_physics_layers": [_scene_physics_tools, "get_physics_layers"],
+		"get_collision_info": [_scene_physics_tools, "get_collision_info"],
 	}
 
 
