@@ -1690,6 +1690,27 @@ class GodotServer {
           return await this.handleViaBridge('apply_particle_preset', normalizedArgs);
         case 'get_particle_info':
           return await this.handleViaBridge('get_particle_info', normalizedArgs);
+        // Phase 2b — scene_2d scaffolding tools.
+        case 'add_sprite_2d':
+          return await this.handleViaBridge('add_sprite_2d', normalizedArgs);
+        case 'setup_camera_2d':
+          return await this.handleViaBridge('setup_camera_2d', normalizedArgs);
+        case 'add_canvas_layer':
+          return await this.handleViaBridge('add_canvas_layer', normalizedArgs);
+        case 'setup_parallax_background':
+          return await this.handleViaBridge('setup_parallax_background', normalizedArgs);
+        case 'add_area_2d':
+          return await this.handleViaBridge('add_area_2d', normalizedArgs);
+        case 'setup_character_body_2d':
+          return await this.handleViaBridge('setup_character_body_2d', normalizedArgs);
+        case 'setup_static_body_2d':
+          return await this.handleViaBridge('setup_static_body_2d', normalizedArgs);
+        case 'add_y_sort_container':
+          return await this.handleViaBridge('add_y_sort_container', normalizedArgs);
+        case 'set_node_2d_transform':
+          return await this.handleViaBridge('set_node_2d_transform', normalizedArgs);
+        case 'add_path_2d':
+          return await this.handleViaBridge('add_path_2d', normalizedArgs);
         // UI/Theme Tools handlers
         case 'set_theme_color':
           return await this.handleViaBridge('set_theme_color', normalizedArgs);

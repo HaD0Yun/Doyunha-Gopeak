@@ -21,6 +21,27 @@ export const TOOL_GROUPS: Record<string, ToolGroupDefinition> = {
     tools: ['create_particles', 'set_particle_material', 'set_particle_color_gradient', 'apply_particle_preset', 'get_particle_info'],
     keywords: ['particles', 'particle system', 'GPUParticles', 'CPUParticles', 'fire', 'smoke', 'snow', 'explosion', 'sparks', 'rain', 'confetti', 'color gradient', 'color ramp', 'particle preset'],
   },
+  scene_2d: {
+    description: '2D scene scaffolding (sprite, camera 2d, parallax, canvas layer, character body 2d, area 2d, static body 2d, y sort, path 2d)',
+    tools: [
+      'add_sprite_2d',
+      'setup_camera_2d',
+      'add_canvas_layer',
+      'setup_parallax_background',
+      'add_area_2d',
+      'setup_character_body_2d',
+      'setup_static_body_2d',
+      'add_y_sort_container',
+      'set_node_2d_transform',
+      'add_path_2d',
+    ],
+    keywords: [
+      '2d scene', 'sprite', 'camera 2d', 'parallax', 'canvas layer',
+      'character body 2d', 'area 2d', 'static body 2d',
+      'platformer', 'top down', 'hud', 'y sort', 'path 2d',
+      'follow target', 'camera zoom', 'camera limits', 'camera smoothing',
+    ],
+  },
   uid: {
     description: 'UID management for resources',
     tools: ['get_uid', 'update_project_uids'],
