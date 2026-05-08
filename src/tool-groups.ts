@@ -6,6 +6,11 @@ export const TOOL_GROUPS: Record<string, ToolGroupDefinition> = {
     tools: ['duplicate_node', 'reparent_node', 'load_sprite'],
     keywords: ['duplicate', 'reparent', 'move node', 'sprite', 'texture', 'copy node'],
   },
+  scene_3d: {
+    description: '3D scene scaffolding (mesh, camera, lighting, environment, materials, gridmap)',
+    tools: ['add_mesh_instance', 'setup_camera_3d', 'setup_lighting', 'setup_environment', 'set_material_3d', 'add_gridmap'],
+    keywords: ['3d scene', '3d build', 'mesh instance', 'mesh', 'primitive', 'camera 3d', 'look at', 'lighting', 'directional light', 'omni light', 'spot light', 'world environment', 'sky', 'fog', 'glow', 'material 3d', 'standard material', 'gridmap', 'mesh library'],
+  },
   uid: {
     description: 'UID management for resources',
     tools: ['get_uid', 'update_project_uids'],
