@@ -1649,7 +1649,11 @@ class GodotServer {
           return await this.handleViaBridge('add_animation_state', normalizedArgs);
         case 'connect_animation_states':
           return await this.handleViaBridge('connect_animation_states', normalizedArgs);
-        // Phase 2 — scene_3d scaffolding tools
+        // Phase 2 — scene_3d scaffolding tools.
+        // These dispatch directly to the GD handler in src/addon/godot_mcp_editor/tools/scene_3d_tools.gd
+        // via handleViaBridge, with no TS handler module under src/tools/. The schemas are
+        // pure pass-through (no TS-side preprocessing required), so routing through the bridge
+        // matches the pattern already used by tools like create_resource and create_animation.
         case 'add_mesh_instance':
           return await this.handleViaBridge('add_mesh_instance', normalizedArgs);
         case 'setup_camera_3d':

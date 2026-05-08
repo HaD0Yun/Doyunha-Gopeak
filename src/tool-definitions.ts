@@ -2072,7 +2072,7 @@ export function buildToolDefinitions(godotBridgePort: number): MCPToolDefinition
               projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot. Use the same path across all tool calls in a workflow.' },
               scenePath: { type: 'string', description: 'Path to the scene file' },
               nodePath: { type: 'string', description: 'Path to the MeshInstance3D node' },
-              surfaceIndex: { type: 'number', description: 'Surface index to apply material to (default 0; -1 uses material_override)' },
+              surfaceIndex: { type: 'number', description: 'Surface override target. >= 0 calls MeshInstance3D.set_surface_override_material(index, mat) (default 0 = first surface, requires a MeshInstance3D node); pass -1 to set material_override on any GeometryInstance3D' },
               materialPath: { type: 'string', description: 'Resource path to an existing material to assign' },
               materialProperties: {
                 type: 'object',

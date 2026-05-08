@@ -51,6 +51,8 @@ func _to_scene_res_path(project_path: String, scene_path: String) -> String:
 
 
 func _load_scene(scene_path: String) -> Array:
+	if scene_path.strip_edges().is_empty():
+		return [null, {"ok": false, "error": "Missing scenePath"}]
 	if not FileAccess.file_exists(scene_path):
 		return [null, {"ok": false, "error": "Scene not found: " + scene_path}]
 	var packed := load(scene_path) as PackedScene
