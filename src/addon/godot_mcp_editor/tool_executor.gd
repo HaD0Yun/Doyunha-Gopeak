@@ -7,6 +7,7 @@ var _editor_plugin: EditorPlugin = null
 var _scene_tools: Node = null
 var _resource_tools: Node = null
 var _animation_tools: Node = null
+var _scene_3d_tools: Node = null
 
 var _tool_map: Dictionary = {}
 var _initialized := false
@@ -22,6 +23,8 @@ func set_editor_plugin(plugin: EditorPlugin) -> void:
 		_resource_tools.set_editor_plugin(plugin)
 	if _animation_tools and _animation_tools.has_method("set_editor_plugin"):
 		_animation_tools.set_editor_plugin(plugin)
+	if _scene_3d_tools and _scene_3d_tools.has_method("set_editor_plugin"):
+		_scene_3d_tools.set_editor_plugin(plugin)
 
 
 func _init_tools() -> void:
@@ -33,6 +36,7 @@ func _init_tools() -> void:
 	var scene_tools_path := "%s/tools/scene_tools.gd" % base_path
 	var resource_tools_path := "%s/tools/resource_tools.gd" % base_path
 	var animation_tools_path := "%s/tools/animation_tools.gd" % base_path
+	var scene_3d_tools_path := "%s/tools/scene_3d_tools.gd" % base_path
 
 	if ResourceLoader.exists(scene_tools_path):
 		var scene_script: Script = load(scene_tools_path)
@@ -54,6 +58,13 @@ func _init_tools() -> void:
 			_animation_tools = animation_script.new()
 			_animation_tools.name = "AnimationTools"
 			add_child(_animation_tools)
+
+	if ResourceLoader.exists(scene_3d_tools_path):
+		var scene_3d_script: Script = load(scene_3d_tools_path)
+		if scene_3d_script:
+			_scene_3d_tools = scene_3d_script.new()
+			_scene_3d_tools.name = "Scene3DTools"
+			add_child(_scene_3d_tools)
 
 	_tool_map = {
 		# Scene tools
@@ -89,7 +100,15 @@ func _init_tools() -> void:
 		"add_animation_state": [_animation_tools, "add_animation_state"],
 		"connect_animation_states": [_animation_tools, "connect_animation_states"],
 		"create_navigation_region": [_animation_tools, "create_navigation_region"],
-		"create_navigation_agent": [_animation_tools, "create_navigation_agent"]
+		"create_navigation_agent": [_animation_tools, "create_navigation_agent"],
+
+		# Scene 3D tools
+		"add_mesh_instance": [_scene_3d_tools, "add_mesh_instance"],
+		"setup_camera_3d": [_scene_3d_tools, "setup_camera_3d"],
+		"setup_lighting": [_scene_3d_tools, "setup_lighting"],
+		"setup_environment": [_scene_3d_tools, "setup_environment"],
+		"set_material_3d": [_scene_3d_tools, "set_material_3d"],
+		"add_gridmap": [_scene_3d_tools, "add_gridmap"],
 	}
 
 

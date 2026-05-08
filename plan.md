@@ -76,78 +76,103 @@ Phases are ordered by leverage on the autonomous loop. Phase 1 alone
 unlocks closed-loop AI play-testing; later phases broaden what the AI can
 build before testing.
 
-### Phase 1 — AI Run closed loop (the unlock)
+### Phase 1 — AI Run closed loop (the unlock)  **[DONE]**
 
 Goal: AI can write `run_test_scenario`, the server runs it, the AI gets a
 pass/fail report — without a human watching.
 
 **New tools:**
-- `wait_for_node(path, timeout_ms)`
-- `monitor_properties(node_paths, properties, duration_ms, sample_hz)`
-- `batch_get_properties(targets[])`
-- `find_ui_elements(filter)` and `click_button_by_text(text, exact?)`
-- `assert_node_state(path, expectations[])` — equality, range, regex,
+- [x] `wait_for_node(path, timeout_ms)`
+- [x] `monitor_properties(node_paths, properties, duration_ms, sample_hz)`
+- [x] `batch_get_properties(targets[])`
+- [x] `find_ui_elements(filter)` and `click_button_by_text(text, exact?)`
+- [x] `assert_node_state(path, expectations[])` — equality, range, regex,
   `exists`/`!exists`
-- `assert_screen_text(text, region?)` — start with label-tree scan; OCR
-  optional behind a flag
-- `compare_screenshots(a, b, tolerance, region?)` — perceptual hash + SSIM
-- `capture_frames(count, interval_ms)` and `get_editor_screenshot()`
-- `start_recording(name)` / `stop_recording()` / `replay_recording(name, speed?)`
-- `run_test_scenario(scenario)` — scenario = `{ setup, steps[], asserts[],
+- [x] `assert_screen_text(text, region?)` — label-tree scan; OCR optional
+  behind a flag
+- [x] `compare_screenshots(a, b, tolerance, region?)` — perceptual hash + SSIM
+- [x] `capture_frames(count, interval_ms)` and `get_editor_screenshot()`
+- [x] `start_recording(name)` / `stop_recording()` / `replay_recording(name, speed?)`
+- [x] `run_test_scenario(scenario)` — scenario = `{ setup, steps[], asserts[],
   teardown }`; steps reuse existing `inject_*` plus the new sync/assertion
   primitives
-- `run_stress_test(seed, duration_ms, action_set?)`
-- `get_test_report(run_id?)`
-- `get_performance_monitors(names[])` extending the existing
+- [x] `run_stress_test(seed, duration_ms, action_set?)`
+- [x] `get_test_report(run_id?)`
+- [x] `get_performance_monitors(names[])` extending the existing
   `get_runtime_metrics`
 
 **Where it lives:**
-- TS surface: new `src/tools/runtime_test.ts` module exporting handlers;
+- [x] TS surface: new `src/tools/runtime_test.ts` module exporting handlers;
   schemas registered in `src/tool-definitions.ts`.
-- New tool group `runtime_test` in `src/tool-groups.ts` plus expansion of
+- [x] New tool group `runtime_test` in `src/tool-groups.ts` plus expansion of
   the existing `testing` group keyword list (`assert`, `wait`, `monitor`,
   `record`, `replay`, `scenario`, `stress`, `compare screenshots`).
-- Runtime side: extend `src/addon/godot_mcp_runtime/` to handle new socket
+- [x] Runtime side: extend `src/addon/godot_mcp_runtime/` to handle new socket
   commands. Recording = capture `Input.parse_input_event` stream with
   frame index from `Engine.get_process_frames()`. Replay = inject events
   on matching frame counter.
-- Screenshot diff: pure-Node implementation in `src/tools/image_diff.ts`
+- [x] Screenshot diff: pure-Node implementation in `src/tools/image_diff.ts`
   (no native deps — pHash + per-tile mean diff is enough; SSIM optional
   and lazy-loaded).
-- Test report: persist to `<project>/.gopeak/test-runs/<id>.json`; expose
+- [x] Test report: persist to `<project>/.gopeak/test-runs/<id>.json`; expose
   via existing MCP resources (`src/resources.ts`) so clients can browse
   past runs without an extra tool call.
 
 **Acceptance:**
-- Smoke test in `test-e2e-dynamic-groups.mjs` plus a new
+- [x] Smoke test in `test-e2e-dynamic-groups.mjs` plus a new
   `test-runtime-loop.mjs` that drives a sample project: `wait_for_node` →
-  inject sequence → assert state + screen text → capture report. Must
-  pass headless in CI.
+  inject sequence → assert state + screen text → capture report. Passes
+  headless in CI.
 
-### Phase 2 — AI Build scaffolding (3D / Physics / Particles)
+### Phase 2 — AI Build scaffolding (3D / Physics / Particles)  **[IN PROGRESS]**
 
 Goal: AI can stand up a playable 3D test bed in a handful of tool calls
 instead of dozens of `add_node` + `set_node_properties` calls.
 
 **New tools:**
-- 3D group: `add_mesh_instance`, `setup_camera_3d`, `setup_lighting`,
-  `setup_environment`, `set_material_3d`, `add_gridmap`
-- Physics group: `setup_collision`, `setup_physics_body`, `add_raycast`,
-  `set_physics_layers`, `get_physics_layers`, `get_collision_info`
-- Particles group: `create_particles`, `set_particle_material`,
-  `set_particle_color_gradient`, `apply_particle_preset`, `get_particle_info`
+
+- 3D group:
+  - [x] scaffolding (schemas, group, GD module skeleton, executor wiring,
+    TS dispatch) — Task A1
+  - [x] `add_mesh_instance` — Task A2
+  - [x] `setup_camera_3d` — Task A3
+  - [x] `setup_lighting` — Task A4
+  - [x] `setup_environment` — Task A5
+  - [x] `set_material_3d` — Task A6
+  - [x] `add_gridmap` — Task A7
+  - [x] smoke test `test-build-scaffolding.mjs` (scene_3d coverage) — Task A8
+
+- Physics group:
+  - [ ] scaffolding — Task B1
+  - [ ] `setup_collision` — Task B2
+  - [ ] `setup_physics_body` — Task B3
+  - [ ] `add_raycast` — Task B4
+  - [ ] `set_physics_layers` — Task B5
+  - [ ] `get_physics_layers` — Task B6
+  - [ ] `get_collision_info` — Task B7
+  - [ ] smoke test (scene_physics coverage) — Task B8
+
+- Particles group:
+  - [ ] scaffolding — Task C1
+  - [ ] `create_particles` — Task C2
+  - [ ] `set_particle_material` — Task C3
+  - [ ] `set_particle_color_gradient` — Task C4
+  - [ ] `apply_particle_preset` — Task C5
+  - [ ] `get_particle_info` — Task C6
+  - [ ] smoke test (scene_particles coverage) — Task C7
 
 **Where it lives:**
-- These are bridge-backed scene edits — extend
-  `src/addon/godot_mcp_editor/` with new operations and add matching
-  handlers in `src/tools/scene_3d.ts`, `scene_physics.ts`,
-  `scene_particles.ts`.
-- New tool groups `scene_3d`, `scene_physics`, `scene_particles` in
-  `src/tool-groups.ts`.
+- [x] Bridge-backed scene edits via `src/addon/godot_mcp_editor/tools/scene_3d_tools.gd`
+  (created in A1) — physics and particles modules to follow.
+- Direct dispatch from `src/index.ts` to `handleViaBridge`; no separate TS
+  handler module needed (deviates from original plan, matches Phase 1's
+  pattern for purely bridge-backed tools like `create_resource`).
+- [x] New tool group `scene_3d` registered in `src/tool-groups.ts`
+  (`scene_physics` and `scene_particles` groups still pending).
 - Reuse the typed-property coercion already in place
   (`Vector2`/`Vector3` tagged values) — no schema churn needed.
 
-### Phase 2b — AI Build scaffolding (2D)
+### Phase 2b — AI Build scaffolding (2D)  **[NOT STARTED]**
 
 Goal: give GoPeak a first-class `scene_2d` group. Today 2D composition
 relies on raw `add_node` with `Node2D`/`Control` classes; a dedicated
@@ -165,26 +190,26 @@ UI prototypes in a few calls instead of dozens.
 | 2D character/area body scaffold | — |
 
 **New tools:**
-- `add_sprite_2d(parent, name, texture, position?, region?, frames?)` —
+- [ ] `add_sprite_2d(parent, name, texture, position?, region?, frames?)` —
   one-call sprite with texture assignment (today: `add_node` Sprite2D
   + `set_node_properties` + `load_sprite`).
-- `setup_camera_2d(parent, name, target_path?, zoom?, limits?, smoothing?)`
+- [ ] `setup_camera_2d(parent, name, target_path?, zoom?, limits?, smoothing?)`
   — Camera2D with optional follow target and bounds.
-- `add_canvas_layer(parent, name, layer_index?, follow_viewport?)` —
+- [ ] `add_canvas_layer(parent, name, layer_index?, follow_viewport?)` —
   HUD / overlay scaffolding.
-- `setup_parallax_background(parent, layers[])` — `ParallaxBackground` +
+- [ ] `setup_parallax_background(parent, layers[])` — `ParallaxBackground` +
   `ParallaxLayer` + sprite per layer with motion scale, in one call.
-- `add_area_2d(parent, name, shape, size, layers?, monitorable?)` —
+- [ ] `add_area_2d(parent, name, shape, size, layers?, monitorable?)` —
   Area2D + CollisionShape2D + Shape2D resource, wired together.
-- `setup_character_body_2d(parent, name, shape, size, sprite?, script?)`
+- [ ] `setup_character_body_2d(parent, name, shape, size, sprite?, script?)`
   — CharacterBody2D + CollisionShape2D + optional Sprite2D + optional
   movement script template (`platformer`, `top_down`, `none`).
-- `setup_static_body_2d(parent, name, shape, size, layers?)` — same for
+- [ ] `setup_static_body_2d(parent, name, shape, size, layers?)` — same for
   static geometry.
-- `add_y_sort_container(parent, name)` — top-down z-ordering helper.
-- `set_node_2d_transform(path, position?, rotation?, scale?)` — typed
+- [ ] `add_y_sort_container(parent, name)` — top-down z-ordering helper.
+- [ ] `set_node_2d_transform(path, position?, rotation?, scale?)` — typed
   Vector2 ergonomics shortcut over `set_node_properties`.
-- `add_path_2d(parent, name, points[], closed?)` — Path2D + Curve2D in
+- [ ] `add_path_2d(parent, name, points[], closed?)` — Path2D + Curve2D in
   one call (useful for follow paths).
 
 **Where it lives:**
@@ -202,7 +227,7 @@ UI prototypes in a few calls instead of dozens.
   schema churn.
 
 **Acceptance:**
-- Smoke test in `test-build-scaffolding.mjs` (introduced in M2) covers
+- [ ] Smoke test in `test-build-scaffolding.mjs` (introduced in M2) covers
   one platformer scene built in ≤8 tool calls: `setup_camera_2d` +
   `add_sprite_2d` (background) + `setup_parallax_background` +
   `setup_character_body_2d` (player, platformer template) +
@@ -215,18 +240,26 @@ UI prototypes in a few calls instead of dozens.
 - Lets M2 ship 3D scaffolding on a tight schedule, while 2D ships in
   M2.5 / M3.
 
-### Phase 3 — Cross-scene refactor & code analysis
+### Phase 3 — Cross-scene refactor & code analysis  **[NOT STARTED]**
 
 Goal: enable the AI to do safe project-wide changes and reason about the
 shape of the project.
 
 **New tools:**
-- Refactor: `find_node_references`, `find_signal_connections`,
-  `find_nodes_by_type`, `cross_scene_set_property`, `batch_set_property`,
-  `get_scene_dependencies`
-- Analysis: `find_unused_resources`, `analyze_signal_flow`,
-  `analyze_scene_complexity`, `find_script_references`,
-  `detect_circular_dependencies`, `get_project_statistics`
+- Refactor:
+  - [ ] `find_node_references`
+  - [ ] `find_signal_connections`
+  - [ ] `find_nodes_by_type`
+  - [ ] `cross_scene_set_property`
+  - [ ] `batch_set_property`
+  - [ ] `get_scene_dependencies`
+- Analysis:
+  - [ ] `find_unused_resources`
+  - [ ] `analyze_signal_flow`
+  - [ ] `analyze_scene_complexity`
+  - [ ] `find_script_references`
+  - [ ] `detect_circular_dependencies`
+  - [ ] `get_project_statistics`
 
 **Where it lives:**
 - `src/tools/refactor.ts` — bridge-backed for live edits, falls back to
@@ -236,20 +269,31 @@ shape of the project.
   Important so analysis works in CI / pre-commit contexts.
 - New groups `refactor`, `code_analysis`.
 
-### Phase 4 — Animation tree depth & ergonomics
+### Phase 4 — Animation tree depth & ergonomics  **[NOT STARTED]**
 
 Goal: round out animation-tree authoring and small node ergonomics.
 
 **New tools:**
-- AnimationTree: `get_animation_tree_structure`, `add_state_machine_state`,
-  `remove_state_machine_state`, `add_state_machine_transition`,
-  `remove_state_machine_transition`, `set_blend_tree_node`,
-  `set_tree_parameter`
-- Node ergonomics: `move_node` (reorder among siblings), `rename_node`,
-  `set_anchor_preset`
-- Resource: `read_resource`, `edit_resource`
-- Editor utilities: `execute_editor_script`, `clear_output`,
-  `reload_plugin`, `reload_project`
+- AnimationTree:
+  - [ ] `get_animation_tree_structure`
+  - [ ] `add_state_machine_state`
+  - [ ] `remove_state_machine_state`
+  - [ ] `add_state_machine_transition`
+  - [ ] `remove_state_machine_transition`
+  - [ ] `set_blend_tree_node`
+  - [ ] `set_tree_parameter`
+- Node ergonomics:
+  - [ ] `move_node` (reorder among siblings)
+  - [ ] `rename_node`
+  - [ ] `set_anchor_preset`
+- Resource:
+  - [ ] `read_resource`
+  - [ ] `edit_resource`
+- Editor utilities:
+  - [ ] `execute_editor_script`
+  - [ ] `clear_output`
+  - [ ] `reload_plugin`
+  - [ ] `reload_project`
 
 **Where it lives:**
 - Extend the existing `animation` group; add a new `editor_utility` group
@@ -292,13 +336,13 @@ Goal: round out animation-tree authoring and small node ergonomics.
 
 ## 6. Milestones
 
-| Milestone | Phases | Outcome |
-|---|---|---|
-| M1 — Closed loop | 1 | AI can run a scenario and self-grade it |
-| M2 — 3D-ready scaffolding | 1 + 2 | AI can build a 3D test bed and run scenarios on it |
-| M2.5 — 2D scaffolding | 1 + 2b | First-class 2D scene scaffolding |
-| M3 — Project intelligence | 1–3 | AI can refactor across scenes safely |
-| M4 — Full closed loop + scaffolding | 1–4 | Complete AI-build / AI-run surface, plus 2D scaffolding |
+| Milestone | Phases | Status | Outcome |
+|---|---|---|---|
+| M1 — Closed loop | 1 | DONE | AI can run a scenario and self-grade it |
+| M2 — 3D-ready scaffolding | 1 + 2 | IN PROGRESS | AI can build a 3D test bed and run scenarios on it |
+| M2.5 — 2D scaffolding | 1 + 2b | NOT STARTED | First-class 2D scene scaffolding |
+| M3 — Project intelligence | 1–3 | NOT STARTED | AI can refactor across scenes safely |
+| M4 — Full closed loop + scaffolding | 1–4 | NOT STARTED | Complete AI-build / AI-run surface, plus 2D scaffolding |
 
 Each milestone is independently shippable as a minor version bump
 (`2.4.0`, `2.5.0`, …) using the existing `scripts/bump-version.mjs`
