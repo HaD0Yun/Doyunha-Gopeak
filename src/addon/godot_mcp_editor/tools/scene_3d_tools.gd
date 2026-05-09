@@ -516,7 +516,8 @@ func setup_lighting(args: Dictionary) -> Dictionary:
 			color_val = parsed
 			has_color = true
 
-	var energy: float = float(args.get("energy", 0.0))
+	var has_energy: bool = args.has("energy")
+	var energy: float = float(args.get("energy", 1.0))
 	var range_val: float = float(args.get("range", 0.0))
 	var spot_angle: float = float(args.get("spotAngle", 0.0))
 
@@ -554,7 +555,7 @@ func setup_lighting(args: Dictionary) -> Dictionary:
 
 	if has_color:
 		light.light_color = color_val
-	if energy > 0.0:
+	if has_energy:
 		light.light_energy = energy
 	if args.has("shadowEnabled"):
 		light.shadow_enabled = bool(args.get("shadowEnabled"))

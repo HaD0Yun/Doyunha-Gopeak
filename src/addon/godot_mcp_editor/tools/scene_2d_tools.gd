@@ -77,6 +77,15 @@ func _save_scene(scene_root: Node, scene_path: String) -> Dictionary:
 	return {}
 
 
+func _set_owner_safe(node: Node, scene_root: Node) -> void:
+	if node == null or scene_root == null:
+		return
+	node.owner = scene_root
+	for child in node.get_children():
+		if child is Node:
+			_set_owner_safe(child as Node, scene_root)
+
+
 func _find_node(root: Node, path: String) -> Node:
 	if path == "." or path.is_empty():
 		return root
@@ -166,8 +175,9 @@ func add_sprite_2d(args: Dictionary) -> Dictionary:
 		sprite.scale = _parse_value(scale, TYPE_VECTOR2)
 
 	parent.add_child(sprite)
-	if sprite.get_parent() and _editor_plugin:
-		sprite.set_owner(_editor_plugin.get_editor_interface().get_edited_scene_root())
+	var edited_root = _editor_plugin.get_editor_interface().get_edited_scene_root()
+	if sprite.get_parent() and _editor_plugin and edited_root:
+		sprite.set_owner(edited_root)
 
 	_save_scene(scene_root, scene_res_path)
 	return {

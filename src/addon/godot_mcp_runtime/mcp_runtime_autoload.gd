@@ -241,8 +241,10 @@ func _cmd_set_property(params: Dictionary) -> Dictionary:
 		return {"type": "error", "message": "Node not found: " + node_path}
 	
 	var old_value = node.get(property)
-	node.set(property, _deserialize_value(value))
-	
+	var set_result = node.set(property, _deserialize_value(value))
+	if set_result != OK:
+		return {"type": "error", "message": "Failed to set property '" + property + "' on node at " + node_path}
+
 	return {
 		"type": "property_set",
 		"path": node_path,
@@ -270,14 +272,20 @@ func _cmd_call_method(params: Dictionary) -> Dictionary:
 	var deserialized_args = []
 	for arg in args:
 		deserialized_args.append(_deserialize_value(arg))
-	
-	var result = node.callv(method, deserialized_args)
-	
+
+	var result = null
+	var call_ok = true
+	if node.has_method(method):
+		result = node.callv(method, deserialized_args)
+	else:
+		call_ok = false
+
 	return {
 		"type": "method_result",
 		"path": node_path,
 		"method": method,
-		"result": _serialize_value(result)
+		"result": _serialize_value(result),
+		"ok": call_ok
 	}
 
 

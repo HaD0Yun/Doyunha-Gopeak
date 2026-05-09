@@ -313,7 +313,7 @@ func create_scene(args: Dictionary) -> Dictionary:
 	var root := ClassDB.instantiate(root_node_type) as Node
 	if not root:
 		return {"ok": false, "error": "Failed to instantiate root node: " + root_node_type}
-	root.name = root_node_type
+	root.name = scene_path.get_file().get_basename()
 
 	if not script_path.is_empty():
 		var full_script_path := _to_scene_res_path(project_path, script_path)

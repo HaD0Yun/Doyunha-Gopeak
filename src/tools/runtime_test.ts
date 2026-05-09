@@ -279,18 +279,23 @@ export async function handleAssertNodeState(args: any, deps: ToolDeps): Promise<
     queries: [{ path, properties: uniqueProps }],
   });
   const parsed = parseRuntimePayload(res);
+
+  const result0 = parsed?.results && parsed.results[0];
+  const nodeFound = result0?.found !== false;
+  const isNotFoundError = !isOk(parsed) && (
+    errorTextFromPayload(parsed, '').toLowerCase().includes('node not found') ||
+    errorTextFromPayload(parsed, '').toLowerCase().includes('not found')
+  );
+
+  const notExistsOp = expectations.find((e) => e.op === 'not_exists');
   if (!isOk(parsed)) {
-    const exists = expectations.find((e) => e.op === 'not_exists');
-    if (exists) {
-      // not_exists is satisfied when node was missing
+    if (notExistsOp && isNotFoundError) {
       return textResponse({ passed: true, results: [{ property: null, op: 'not_exists', ok: true }] });
     }
     return errorResponse(errorTextFromPayload(parsed, 'assert_node_state: failed to read node state.'));
   }
 
-  const result0 = (parsed.results && parsed.results[0]) || {};
   const props: Record<string, any> = result0.properties || {};
-  const nodeFound = result0.found !== false;
 
   const results = expectations.map((exp, i) => {
     let actual: any;
@@ -355,7 +360,8 @@ function resolveProjectFile(projectPath: string | null, inputPath: string): stri
   if (isAbsolute(inputPath)) {
     throw new Error('Image path must be relative to the project directory.');
   }
-  if (inputPath.split(/[\\/]/).some((seg) => seg === '..')) {
+  const decodedPath = decodeURIComponent(inputPath);
+  if (decodedPath.split(/[\\/]/).some((seg) => seg === '..')) {
     throw new Error('Image path may not contain ".." segments.');
   }
   const abs = resolvePath(projectPath, inputPath);
@@ -374,7 +380,7 @@ async function loadPngFromArg(value: any, projectPath: string | null): Promise<{
     if (dataUriMatch) b64 = dataUriMatch[1];
     if (/^[A-Za-z0-9+/=\s]+$/.test(b64)) {
       const buf = Buffer.from(b64, 'base64');
-      if (buf.length >= 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+      if (buf.length >= 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47 && buf[4] === 0x0d && buf[5] === 0x0a && buf[6] === 0x1a && buf[7] === 0x0a) {
         return { buffer: buf, source: 'base64' };
       }
     }

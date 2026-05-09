@@ -372,7 +372,7 @@ export function detectCircularDependencies(
   const recursionStack = new Set<string>();
   const path: string[] = [];
 
-  function dfs(node: string): boolean {
+  function dfs(node: string): void {
     visited.add(node);
     recursionStack.add(node);
     path.push(node);
@@ -380,21 +380,17 @@ export function detectCircularDependencies(
     const deps = graph.get(node) ?? new Set();
     for (const dep of deps) {
       if (!visited.has(dep)) {
-        if (dfs(dep)) {
-          return true;
-        }
+        dfs(dep);
       } else if (recursionStack.has(dep)) {
         const cycleStart = path.indexOf(dep);
         const cycle = path.slice(cycleStart);
         cycle.push(dep);
         cycles.push({ path: cycle, length: cycle.length - 1 });
-        return true;
       }
     }
 
     path.pop();
     recursionStack.delete(node);
-    return false;
   }
 
   for (const node of graph.keys()) {

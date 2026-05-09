@@ -107,7 +107,10 @@ func _get_state_machine(anim_tree: AnimationTree, state_machine_path: String = "
 		if current == null or not current.has_method("get_node"):
 			return null
 		current = current.call("get_node", StringName(segment))
-	return current as AnimationNodeStateMachine
+	var sm = current as AnimationNodeStateMachine
+	if sm == null:
+		return null
+	return sm
 
 
 # =============================================================================
