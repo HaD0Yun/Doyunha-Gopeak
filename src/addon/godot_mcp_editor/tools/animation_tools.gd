@@ -533,31 +533,45 @@ func get_animation_tree_structure(args: Dictionary) -> Dictionary:
 
 	if root is AnimationNodeStateMachine:
 		result["states"] = []
-		for child in root.get_children():
-			if child is AnimationNodeStateMachineTranslation:
-				continue
-			var state_info := {"name": child.name, "type": child.get_class()}
+		var state_names: Array = root.get_node_list()
+		for state_name in state_names:
+			var child := root.get_node(state_name)
+			var state_info := {"name": str(state_name), "type": child.get_class()}
 			if child.has_method("get_animation"):
-				state_info["animation"] = child.call("get_animation")
+				state_info["animation"] = str(child.call("get_animation"))
 			result["states"].append(state_info)
 		result["transitions"] = []
+		var switch_mode_names := {
+			AnimationNodeStateMachineTransition.SWITCH_MODE_IMMEDIATE: "immediate",
+			AnimationNodeStateMachineTransition.SWITCH_MODE_SYNC: "sync",
+			AnimationNodeStateMachineTransition.SWITCH_MODE_AT_END: "at_end",
+		}
 		for i in range(root.get_transition_count()):
 			var t := root.get_transition(i)
 			result["transitions"].append({
-				"from": t.from_node,
-				"to": t.to_node,
-				"switchMode": AnimationNodeStateMachineTransition.SWITCH_MODE_NAMES[t.switch_mode] if "SWITCH_MODE_NAMES" in AnimationNodeStateMachineTransition else str(t.switch_mode),
+				"from": str(root.get_transition_from(i)),
+				"to": str(root.get_transition_to(i)),
+				"switchMode": switch_mode_names.get(t.switch_mode, str(t.switch_mode)),
 			})
 	elif root is AnimationNodeBlendTree:
 		result["blendNodes"] = []
-		for child in root.get_children():
-			var node_info := {"name": child.name, "type": child.get_class()}
-			node_info["position"] = child.get_position()
-			result["blendNodes"].append(node_info)
+		var node_names: Array = root.get_node_list()
+		for blend_node_name in node_names:
+			var child := root.get_node(blend_node_name)
+			var pos := root.get_node_position(blend_node_name)
+			result["blendNodes"].append({
+				"name": str(blend_node_name),
+				"type": child.get_class(),
+				"position": {"x": pos.x, "y": pos.y},
+			})
 		result["connections"] = []
-		for i in range(root.get_connections_count()):
-			var c := root.get_connection(i)
-			result["connections"].append({"from": c.from_node, "fromPort": c.from_port, "to": c.to_node, "toPort": c.to_port})
+		var conns: Array = root.get_node_connections()
+		for c in conns:
+			result["connections"].append({
+				"from": str(c.get("output_node", "")),
+				"to": str(c.get("input_node", "")),
+				"toPort": c.get("input_index", 0),
+			})
 
 	scene_root.queue_free()
 	return result
@@ -754,8 +768,7 @@ func remove_state_machine_transition(args: Dictionary) -> Dictionary:
 
 	var removed := false
 	for i in range(sm.get_transition_count() - 1, -1, -1):
-		var t := sm.get_transition(i)
-		if t.from_node == from_state and t.to_node == to_state:
+		if sm.get_transition_from(i) == StringName(from_state) and sm.get_transition_to(i) == StringName(to_state):
 			sm.remove_transition(i)
 			removed = true
 			break
@@ -808,13 +821,8 @@ func set_blend_tree_node(args: Dictionary) -> Dictionary:
 
 	if node_type.is_empty():
 		if root.has_node(StringName(node_name)):
-			var existing_node = root.get_node(StringName(node_name))
-			if existing_node.has_method("set_input_port_count") and inputs.size() > 0:
-				existing_node.call("set_input_port_count", inputs.size())
-			if existing_node.has_method("set_blend_position"):
-				existing_node.call("set_blend_position", Vector2(float(position.get("x", 0)), float(position.get("y", 0))))
-			if existing_node.has_method("set_blend_time"):
-				existing_node.call("set_blend_time", float(blend))
+			var pos := Vector2(float(position.get("x", 0)), float(position.get("y", 0)))
+			root.set_node_position(StringName(node_name), pos)
 			var save_err := _save_scene(scene_root, scene_path)
 			if not save_err.is_empty():
 				return save_err
@@ -840,10 +848,8 @@ func set_blend_tree_node(args: Dictionary) -> Dictionary:
 			scene_root.queue_free()
 			return {"ok": false, "error": "Unsupported nodeType: " + node_type}
 
-	new_node.name = node_name
-	new_node.set_position(Vector2(float(position.get("x", 0)), float(position.get("y", 0))))
-
-	root.add_node(StringName(node_name), new_node)
+	var pos := Vector2(float(position.get("x", 0)), float(position.get("y", 0)))
+	root.add_node(StringName(node_name), new_node, pos)
 
 	var save_err := _save_scene(scene_root, scene_path)
 	if not save_err.is_empty():
@@ -879,16 +885,8 @@ func set_tree_parameter(args: Dictionary) -> Dictionary:
 		scene_root.queue_free()
 		return {"ok": false, "error": "AnimationTree not found at: " + anim_tree_path}
 
-	if not anim_tree.has(Control.PROPERTY_USAGE-editor):
-		if not anim_tree.has_property(property_path):
-			scene_root.queue_free()
-			return {"ok": false, "error": "Parameter not found: " + parameter_path}
-
 	var parsed_value = _parse_json_maybe(value) if typeof(value) == TYPE_STRING else value
 	parsed_value = _parse_value(parsed_value)
-
-	if not anim_tree.has_parameter(StringName(parameter_path)):
-		anim_tree.add_parameter(StringName(parameter_path))
 
 	anim_tree.set_parameter(StringName(parameter_path), parsed_value)
 

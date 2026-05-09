@@ -890,8 +890,10 @@ func set_anchor_preset(args: Dictionary) -> Dictionary:
 		"BottomCenter": Control.PRESET_BOTTOM_CENTER,
 	}
 
-	var preset_value := preset_map.get(anchor_preset_name, Control.PRESET_FULL_RECT)
-	node.set_anchors_preset(preset_value, keep_margins)
+	if not preset_map.has(anchor_preset_name):
+		scene_root.queue_free()
+		return {"ok": false, "error": "Unknown anchorPreset: " + anchor_preset_name}
+	node.set_anchors_preset(preset_map[anchor_preset_name] as int, keep_margins)
 
 	var save_err := _save_scene(scene_root, scene_path)
 	if not save_err.is_empty():
@@ -912,11 +914,7 @@ func read_resource(args: Dictionary) -> Dictionary:
 	if not FileAccess.file_exists(resource_path):
 		return {"ok": false, "error": "Resource not found: " + resource_path}
 
-	var resource: Resource
-	if resource_path.ends_with(".gd"):
-		resource = load(resource_path)
-	else:
-		resource = load(resource_path)
+	var resource: Resource = load(resource_path)
 
 	if not resource:
 		return {"ok": false, "error": "Failed to load resource: " + resource_path}
@@ -1004,7 +1002,6 @@ func execute_editor_script(args: Dictionary) -> Dictionary:
 
 	var instance: Object = script.new()
 	if not instance:
-		script.queue_free()
 		return {"ok": false, "error": "Script instantiation failed"}
 
 	if instance.has_method("_execute"):
@@ -1016,8 +1013,10 @@ func execute_editor_script(args: Dictionary) -> Dictionary:
 	for line in output_lines:
 		result["output"] += str(line) + "\n"
 
-	instance.queue_free()
-	script.queue_free()
+	if instance is Node:
+		instance.queue_free()
+	elif not instance is RefCounted:
+		instance.free()
 
 	return result
 
@@ -1026,8 +1025,6 @@ func execute_editor_script(args: Dictionary) -> Dictionary:
 # clear_output — clear the Output dock (no-op unless editor available)
 # =============================================================================
 func clear_output(args: Dictionary) -> Dictionary:
-	if _editor_plugin:
-		pass
 	return {"ok": true, "message": "Output cleared (no-op in headless mode)"}
 
 
@@ -1047,5 +1044,9 @@ func reload_plugin(args: Dictionary) -> Dictionary:
 func reload_project(args: Dictionary) -> Dictionary:
 	if not _editor_plugin:
 		return {"ok": false, "error": "Editor plugin not available"}
-	_editor_plugin.get_editor_interface().get_resource_filesystem().scan()
+	var ei := _editor_plugin.get_editor_interface()
+	ei.get_resource_filesystem().scan()
+	var edited_root := ei.get_edited_scene_root()
+	if edited_root and not edited_root.scene_file_path.is_empty():
+		ei.reload_scene_from_path(edited_root.scene_file_path)
 	return {"ok": true, "message": "Project reload triggered"}

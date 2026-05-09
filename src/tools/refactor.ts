@@ -1,47 +1,6 @@
-import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, relative as relativePath, dirname, basename } from 'node:path';
-
-function collectFiles(
-  projectPath: string,
-  dir: string,
-  extensions: string[],
-  filter?: (relPath: string) => boolean
-): string[] {
-  const results: string[] = [];
-
-  function scan(d: string): void {
-    let entries: string[];
-    try {
-      entries = readdirSync(d);
-    } catch {
-      return;
-    }
-
-    for (const name of entries) {
-      if (name.startsWith('.')) continue;
-      const fullPath = join(d, name);
-      let st: ReturnType<typeof statSync>;
-      try {
-        st = statSync(fullPath);
-      } catch {
-        continue;
-      }
-
-      if (st.isDirectory()) {
-        if (name === 'addons' || name === '.godot' || name === '.gopeak') continue;
-        scan(fullPath);
-      } else if (extensions.some(ext => name.endsWith('.' + ext))) {
-        const relPath = 'res://' + relativePath(projectPath, fullPath).replace(/\\/g, '/');
-        if (!filter || filter(relPath)) {
-          results.push(fullPath);
-        }
-      }
-    }
-  }
-
-  scan(dir);
-  return results;
-}
+import { collectFiles } from './fs_utils';
 
 // ─── find_node_references ───────────────────────────────────────────
 
@@ -171,26 +130,20 @@ export function findSignalConnections(
       if (!line.startsWith('[connection')) continue;
 
       const signalMatch = line.match(/signal="([^"]+)"/);
-      const targetMatch = line.match(/target="([^"]+)"/);
+      const toMatch = line.match(/to="([^"]+)"/);
       const methodMatch = line.match(/method="([^"]+)"/);
       const flagsMatch = line.match(/flags=(\d+)/);
+      const fromMatch = line.match(/from="([^"]+)"/);
 
-      if (!signalMatch || !targetMatch) continue;
+      if (!signalMatch || !toMatch) continue;
 
       const signalName = signalMatch[1];
       if (options?.signalName && signalName !== options.signalName) continue;
 
-      const targetNode = targetMatch[1];
+      const targetNode = toMatch[1];
       if (options?.targetNode && targetNode !== options.targetNode) continue;
 
-      let sourceNode = '';
-      for (let j = i - 1; j >= 0 && j >= i - 30; j--) {
-        const prev = lines[j].trim();
-        if (prev.startsWith('[node')) {
-          const nMatch = prev.match(/name="([^"]+)"/);
-          if (nMatch) { sourceNode = nMatch[1]; break; }
-        }
-      }
+      const sourceNode = fromMatch ? fromMatch[1] : '';
 
       if (options?.sourceNode && sourceNode !== options.sourceNode) continue;
 
@@ -260,8 +213,10 @@ export function findNodesByType(
         if (currentNodeType && typeMatches(currentNodeType, typeLower) && currentNodeName) {
           results.push({ scenePath: resPath, nodePath: '/' + currentNodeName, type: currentNodeType });
         }
-        currentNodeName = '';
-        currentNodeType = '';
+        const headerMatch = line.match(/name="([^"]+)"/);
+        const typeHeaderMatch = line.match(/type="([^"]+)"/);
+        currentNodeName = headerMatch ? headerMatch[1] : '';
+        currentNodeType = typeHeaderMatch ? typeHeaderMatch[1] : '';
         inNode = true;
       } else if (inNode) {
         if (trimmed.startsWith('[') && !trimmed.startsWith('[ext_resource') && !trimmed.startsWith('[sub_resource') && !trimmed.startsWith('[node')) {
@@ -269,11 +224,6 @@ export function findNodesByType(
           if (currentNodeType && typeMatches(currentNodeType, typeLower) && currentNodeName) {
             results.push({ scenePath: resPath, nodePath: '/' + currentNodeName, type: currentNodeType });
           }
-        } else {
-          const nameMatch = trimmed.match(/^name="([^"]+)"/);
-          const typeMatch = trimmed.match(/^type="([^"]+)"/);
-          if (nameMatch) currentNodeName = nameMatch[1];
-          if (typeMatch) currentNodeType = typeMatch[1];
         }
       }
     }
@@ -330,15 +280,20 @@ export function crossSceneSetProperty(
 
     const resPath = 'res://' + relativePath(projectPath, sceneFile).replace(/\\/g, '/');
 
-    const nodeNameRe = new RegExp(`\\[node.*?name="${escapeRegex(nodeName)}"[^\\]]*\\]`, 's');
+    const nodeNameRe = new RegExp(`\\[node.*?name="${escapeRegex(nodeName)}"[^\\]]*\\](?:[^[]|\\[(?!node\b))*`, 's');
     const nodeMatch = content.match(nodeNameRe);
     if (!nodeMatch) continue;
 
-    const propRe = new RegExp(`^${propertyName}\\s*=\\s*.+$`, 'm');
-    if (propRe.test(content)) {
-      content = content.replace(propRe, `${propertyName} = ${valueStr}`);
+    if (nodeMatch[0].includes('=')) {
+      const propRe = new RegExp(`^${escapeRegex(propertyName)}\\s*=\\s*.+$`, 'm');
+      if (propRe.test(nodeMatch[0])) {
+        content = content.replace(nodeMatch[0], nodeMatch[0].replace(propRe, `${propertyName} = ${valueStr}`));
+      } else {
+        const insertIdx = content.indexOf(nodeMatch[0]) + nodeMatch[0].length;
+        content = content.slice(0, insertIdx) + `\n${propertyName} = ${valueStr}` + content.slice(insertIdx);
+      }
     } else {
-      const insertIdx = nodeMatch.index! + nodeMatch[0].length;
+      const insertIdx = content.indexOf(nodeMatch[0]) + nodeMatch[0].length;
       content = content.slice(0, insertIdx) + `\n${propertyName} = ${valueStr}` + content.slice(insertIdx);
     }
 
@@ -390,20 +345,26 @@ export function batchSetProperty(
     }
 
     const resPath = 'res://' + relativePath(projectPath, sceneFile).replace(/\\/g, '/');
-    const nodeNameRe = new RegExp(`\\[node.*?name="${escapeRegex(nodeName)}"[^\\]]*\\]`, 's');
+    const nodeNameRe = new RegExp(`\\[node.*?name="${escapeRegex(nodeName)}"[^\\]]*\\](?:[^[]|\\[(?!node\b))*`, 's');
     const nodeMatch = content.match(nodeNameRe);
     if (!nodeMatch) continue;
+
+    const nodeBlockStart = content.indexOf(nodeMatch[0]);
+    const nodeBlockEnd = nodeBlockStart + nodeMatch[0].length;
+    let nodeBlock = nodeMatch[0];
 
     for (const [propName, propValue] of Object.entries(properties)) {
       const valueStr = JSON.stringify(propValue);
       const propRe = new RegExp(`^${escapeRegex(propName)}\\s*=\\s*.+$`, 'm');
-      if (propRe.test(content)) {
-        content = content.replace(propRe, `${propName} = ${valueStr}`);
+      if (propRe.test(nodeBlock)) {
+        nodeBlock = nodeBlock.replace(propRe, `${propName} = ${valueStr}`);
       } else {
-        const insertIdx = nodeMatch.index! + nodeMatch[0].length;
-        content = content.slice(0, insertIdx) + `\n${propName} = ${valueStr}` + content.slice(insertIdx);
+        const insertIdx = nodeBlock.length;
+        nodeBlock = nodeBlock.slice(0, insertIdx) + `\n${propName} = ${valueStr}` + nodeBlock.slice(insertIdx);
       }
     }
+
+    content = content.slice(0, nodeBlockStart) + nodeBlock + content.slice(nodeBlockEnd);
 
     try {
       writeFileSync(sceneFile, content, 'utf-8');
@@ -455,11 +416,11 @@ export function getSceneDependencies(
     const scenes: string[] = [];
     const scripts: string[] = [];
 
-    const extRe = /\[ext_resource.*?path="([^"]+)".*?type="([^"]+)"/g;
+    const extRe = /\[ext_resource[^\]]*path="([^"]+)"[^\]]*type="([^"]+)"[^\]]*\]|\[ext_resource[^\]]*type="([^"]+)"[^\]]*path="([^"]+)"[^\]]*\]/g;
     let m: RegExpExecArray | null;
     while ((m = extRe.exec(content)) !== null) {
-      const path = m[1];
-      const type = m[2];
+      const path = m[1] || m[4];
+      const type = m[2] || m[3];
       if (type === 'GDScript' || path.endsWith('.gd')) scripts.push(path);
       else if (path.endsWith('.tscn')) scenes.push(path);
       else resources.push(path);
