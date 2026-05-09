@@ -10,6 +10,7 @@ var _animation_tools: Node = null
 var _scene_3d_tools: Node = null
 var _scene_physics_tools: Node = null
 var _scene_particles_tools: Node = null
+var _scene_2d_tools: Node = null
 
 var _tool_map: Dictionary = {}
 var _initialized := false
@@ -31,6 +32,8 @@ func set_editor_plugin(plugin: EditorPlugin) -> void:
 		_scene_physics_tools.set_editor_plugin(plugin)
 	if _scene_particles_tools and _scene_particles_tools.has_method("set_editor_plugin"):
 		_scene_particles_tools.set_editor_plugin(plugin)
+	if _scene_2d_tools and _scene_2d_tools.has_method("set_editor_plugin"):
+		_scene_2d_tools.set_editor_plugin(plugin)
 
 
 func _init_tools() -> void:
@@ -45,6 +48,7 @@ func _init_tools() -> void:
 	var scene_3d_tools_path := "%s/tools/scene_3d_tools.gd" % base_path
 	var scene_physics_tools_path := "%s/tools/scene_physics_tools.gd" % base_path
 	var scene_particles_tools_path := "%s/tools/scene_particles_tools.gd" % base_path
+	var scene_2d_tools_path := "%s/tools/scene_2d_tools.gd" % base_path
 
 	if ResourceLoader.exists(scene_tools_path):
 		var scene_script: Script = load(scene_tools_path)
@@ -87,6 +91,13 @@ func _init_tools() -> void:
 			_scene_particles_tools = scene_particles_script.new()
 			_scene_particles_tools.name = "SceneParticlesTools"
 			add_child(_scene_particles_tools)
+
+	if ResourceLoader.exists(scene_2d_tools_path):
+		var scene_2d_script: Script = load(scene_2d_tools_path)
+		if scene_2d_script:
+			_scene_2d_tools = scene_2d_script.new()
+			_scene_2d_tools.name = "Scene2DTools"
+			add_child(_scene_2d_tools)
 
 	_tool_map = {
 		# Scene tools
@@ -146,6 +157,18 @@ func _init_tools() -> void:
 		"set_particle_color_gradient": [_scene_particles_tools, "set_particle_color_gradient"],
 		"apply_particle_preset": [_scene_particles_tools, "apply_particle_preset"],
 		"get_particle_info": [_scene_particles_tools, "get_particle_info"],
+
+		# Scene 2D tools
+		"add_sprite_2d": [_scene_2d_tools, "add_sprite_2d"],
+		"setup_camera_2d": [_scene_2d_tools, "setup_camera_2d"],
+		"add_canvas_layer": [_scene_2d_tools, "add_canvas_layer"],
+		"setup_parallax_background": [_scene_2d_tools, "setup_parallax_background"],
+		"add_area_2d": [_scene_2d_tools, "add_area_2d"],
+		"setup_character_body_2d": [_scene_2d_tools, "setup_character_body_2d"],
+		"setup_static_body_2d": [_scene_2d_tools, "setup_static_body_2d"],
+		"add_y_sort_container": [_scene_2d_tools, "add_y_sort_container"],
+		"set_node_2d_transform": [_scene_2d_tools, "set_node_2d_transform"],
+		"add_path_2d": [_scene_2d_tools, "add_path_2d"],
 	}
 
 
