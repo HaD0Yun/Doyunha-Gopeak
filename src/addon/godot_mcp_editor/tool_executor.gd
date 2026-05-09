@@ -132,8 +132,28 @@ func _init_tools() -> void:
 		"create_animation_tree": [_animation_tools, "create_animation_tree"],
 		"add_animation_state": [_animation_tools, "add_animation_state"],
 		"connect_animation_states": [_animation_tools, "connect_animation_states"],
+		"get_animation_tree_structure": [_animation_tools, "get_animation_tree_structure"],
+		"add_state_machine_state": [_animation_tools, "add_state_machine_state"],
+		"remove_state_machine_state": [_animation_tools, "remove_state_machine_state"],
+		"add_state_machine_transition": [_animation_tools, "add_state_machine_transition"],
+		"remove_state_machine_transition": [_animation_tools, "remove_state_machine_transition"],
+		"set_blend_tree_node": [_animation_tools, "set_blend_tree_node"],
+		"set_tree_parameter": [_animation_tools, "set_tree_parameter"],
 		"create_navigation_region": [_animation_tools, "create_navigation_region"],
 		"create_navigation_agent": [_animation_tools, "create_navigation_agent"],
+
+		# Node ergonomics (scene_tools)
+		"move_node": [_scene_tools, "move_node"],
+		"rename_node": [_scene_tools, "rename_node"],
+		"set_anchor_preset": [_scene_tools, "set_anchor_preset"],
+
+		# Resource tools
+		"read_resource": [_scene_tools, "read_resource"],
+		"edit_resource": [_scene_tools, "edit_resource"],
+		"execute_editor_script": [_scene_tools, "execute_editor_script"],
+		"clear_output": [_scene_tools, "clear_output"],
+		"reload_plugin": [_scene_tools, "reload_plugin"],
+		"reload_project": [_scene_tools, "reload_project"],
 
 		# Scene 3D tools
 		"add_mesh_instance": [_scene_3d_tools, "add_mesh_instance"],

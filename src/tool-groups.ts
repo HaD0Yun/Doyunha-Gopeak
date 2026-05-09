@@ -73,9 +73,19 @@ export const TOOL_GROUPS: Record<string, ToolGroupDefinition> = {
     keywords: ['material', 'shader', 'resource create', 'modify resource', 'create material', 'create shader'],
   },
   animation: {
-    description: 'Animation system (animations, tracks, animation tree, state machine)',
-    tools: ['create_animation', 'add_animation_track', 'create_animation_tree', 'add_animation_state', 'connect_animation_states'],
-    keywords: ['animation', 'animate', 'keyframe', 'animation tree', 'state machine', 'animation track', 'animation state'],
+    description: 'Animation system (animations, tracks, animation tree, state machine, blend tree)',
+    tools: ['create_animation', 'add_animation_track', 'create_animation_tree', 'add_animation_state', 'connect_animation_states', 'get_animation_tree_structure', 'add_state_machine_state', 'remove_state_machine_state', 'add_state_machine_transition', 'remove_state_machine_transition', 'set_blend_tree_node', 'set_tree_parameter'],
+    keywords: ['animation', 'animate', 'keyframe', 'animation tree', 'state machine', 'animation track', 'animation state', 'blend tree', 'blend node', 'animation parameter', 'state transition', 'animation structure'],
+  },
+  node_ergonomics: {
+    description: 'Node tree ergonomics (move, rename, anchor preset)',
+    tools: ['move_node', 'rename_node', 'set_anchor_preset'],
+    keywords: ['move node', 'reorder', 'rename node', 'anchor preset', 'z order', 'draw order'],
+  },
+  editor_utility: {
+    description: 'Editor utility tools (resource read/edit, execute script, clear output, reload plugin/project)',
+    tools: ['read_resource', 'edit_resource', 'execute_editor_script', 'clear_output', 'reload_plugin', 'reload_project'],
+    keywords: ['read resource', 'edit resource', 'execute script', 'editor script', 'clear output', 'reload plugin', 'reload project', 'resource properties'],
   },
   plugin: {
     description: 'Plugin/addon management',
