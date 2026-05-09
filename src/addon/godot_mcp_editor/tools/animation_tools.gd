@@ -500,3 +500,400 @@ func create_navigation_agent(args: Dictionary) -> Dictionary:
 		return save_err
 
 	return {"ok": true, "nodeName": node_name, "is3D": is_3d}
+
+
+# =============================================================================
+# get_animation_tree_structure
+# =============================================================================
+func get_animation_tree_structure(args: Dictionary) -> Dictionary:
+	var scene_path: String = _ensure_res_path(str(args.get("scenePath", "")))
+	var anim_tree_path: String = str(args.get("animTreePath", ""))
+
+	if scene_path.strip_edges() == "res://":
+		return {"ok": false, "error": "Missing scenePath"}
+	if anim_tree_path.is_empty():
+		return {"ok": false, "error": "Missing animTreePath"}
+
+	var loaded := _load_scene(scene_path)
+	if not loaded[1].is_empty():
+		return loaded[1]
+
+	var scene_root: Node = loaded[0]
+	var anim_tree = _find_node(scene_root, anim_tree_path) as AnimationTree
+	if not anim_tree:
+		scene_root.queue_free()
+		return {"ok": false, "error": "AnimationTree not found at: " + anim_tree_path}
+
+	var root = anim_tree.tree_root
+	if not root:
+		scene_root.queue_free()
+		return {"ok": false, "error": "AnimationTree has no tree_root"}
+
+	var result := {"ok": true, "rootType": root.get_class(), "nodes": []}
+
+	if root is AnimationNodeStateMachine:
+		result["states"] = []
+		for child in root.get_children():
+			if child is AnimationNodeStateMachineTranslation:
+				continue
+			var state_info := {"name": child.name, "type": child.get_class()}
+			if child.has_method("get_animation"):
+				state_info["animation"] = child.call("get_animation")
+			result["states"].append(state_info)
+		result["transitions"] = []
+		for i in range(root.get_transition_count()):
+			var t := root.get_transition(i)
+			result["transitions"].append({
+				"from": t.from_node,
+				"to": t.to_node,
+				"switchMode": AnimationNodeStateMachineTransition.SWITCH_MODE_NAMES[t.switch_mode] if "SWITCH_MODE_NAMES" in AnimationNodeStateMachineTransition else str(t.switch_mode),
+			})
+	elif root is AnimationNodeBlendTree:
+		result["blendNodes"] = []
+		for child in root.get_children():
+			var node_info := {"name": child.name, "type": child.get_class()}
+			node_info["position"] = child.get_position()
+			result["blendNodes"].append(node_info)
+		result["connections"] = []
+		for i in range(root.get_connections_count()):
+			var c := root.get_connection(i)
+			result["connections"].append({"from": c.from_node, "fromPort": c.from_port, "to": c.to_node, "toPort": c.to_port})
+
+	scene_root.queue_free()
+	return result
+
+
+# =============================================================================
+# add_state_machine_state
+# =============================================================================
+func add_state_machine_state(args: Dictionary) -> Dictionary:
+	var scene_path: String = _ensure_res_path(str(args.get("scenePath", "")))
+	var anim_tree_path: String = str(args.get("animTreePath", ""))
+	var state_name: String = str(args.get("stateName", ""))
+	var state_machine_path: String = str(args.get("stateMachinePath", ""))
+	var animation_name: String = str(args.get("animationName", ""))
+
+	if scene_path.strip_edges() == "res://":
+		return {"ok": false, "error": "Missing scenePath"}
+	if anim_tree_path.is_empty():
+		return {"ok": false, "error": "Missing animTreePath"}
+	if state_name.is_empty():
+		return {"ok": false, "error": "Missing stateName"}
+
+	var loaded := _load_scene(scene_path)
+	if not loaded[1].is_empty():
+		return loaded[1]
+
+	var scene_root: Node = loaded[0]
+	var anim_tree = _find_node(scene_root, anim_tree_path) as AnimationTree
+	if not anim_tree:
+		scene_root.queue_free()
+		return {"ok": false, "error": "AnimationTree not found at: " + anim_tree_path}
+
+	var sm := _get_state_machine(anim_tree, state_machine_path)
+	if not sm:
+		scene_root.queue_free()
+		return {"ok": false, "error": "AnimationNodeStateMachine not found"}
+
+	if sm.has_node(StringName(state_name)):
+		scene_root.queue_free()
+		return {"ok": false, "error": "State already exists: " + state_name}
+
+	var anim_node: AnimationNodeAnimation
+	if not animation_name.is_empty():
+		anim_node = AnimationNodeAnimation.new()
+		anim_node.animation = StringName(animation_name)
+	else:
+		anim_node = AnimationNodeAnimation.new()
+
+	sm.add_node(StringName(state_name), anim_node)
+
+	var save_err := _save_scene(scene_root, scene_path)
+	if not save_err.is_empty():
+		return save_err
+
+	return {"ok": true, "stateName": state_name, "animationName": animation_name}
+
+
+# =============================================================================
+# remove_state_machine_state
+# =============================================================================
+func remove_state_machine_state(args: Dictionary) -> Dictionary:
+	var scene_path: String = _ensure_res_path(str(args.get("scenePath", "")))
+	var anim_tree_path: String = str(args.get("animTreePath", ""))
+	var state_name: String = str(args.get("stateName", ""))
+	var state_machine_path: String = str(args.get("stateMachinePath", ""))
+
+	if scene_path.strip_edges() == "res://":
+		return {"ok": false, "error": "Missing scenePath"}
+	if anim_tree_path.is_empty():
+		return {"ok": false, "error": "Missing animTreePath"}
+	if state_name.is_empty():
+		return {"ok": false, "error": "Missing stateName"}
+
+	var loaded := _load_scene(scene_path)
+	if not loaded[1].is_empty():
+		return loaded[1]
+
+	var scene_root: Node = loaded[0]
+	var anim_tree = _find_node(scene_root, anim_tree_path) as AnimationTree
+	if not anim_tree:
+		scene_root.queue_free()
+		return {"ok": false, "error": "AnimationTree not found at: " + anim_tree_path}
+
+	var sm := _get_state_machine(anim_tree, state_machine_path)
+	if not sm:
+		scene_root.queue_free()
+		return {"ok": false, "error": "AnimationNodeStateMachine not found"}
+
+	if not sm.has_node(StringName(state_name)):
+		scene_root.queue_free()
+		return {"ok": false, "error": "State not found: " + state_name}
+
+	sm.remove_node(StringName(state_name))
+
+	var save_err := _save_scene(scene_root, scene_path)
+	if not save_err.is_empty():
+		return save_err
+
+	return {"ok": true, "removed": state_name}
+
+
+# =============================================================================
+# add_state_machine_transition
+# =============================================================================
+func add_state_machine_transition(args: Dictionary) -> Dictionary:
+	var scene_path: String = _ensure_res_path(str(args.get("scenePath", "")))
+	var anim_tree_path: String = str(args.get("animTreePath", ""))
+	var from_state: String = str(args.get("fromState", ""))
+	var to_state: String = str(args.get("toState", ""))
+	var transition_type: String = str(args.get("transitionType", "immediate"))
+	var state_machine_path: String = str(args.get("stateMachinePath", ""))
+	var advance_condition: String = str(args.get("advanceCondition", ""))
+	var priority: int = int(args.get("priority", 0))
+	var auto_advance: bool = bool(args.get("autoAdvance", true))
+	var crossfade: float = float(args.get("crossfade", 0.0))
+
+	if scene_path.strip_edges() == "res://":
+		return {"ok": false, "error": "Missing scenePath"}
+	if anim_tree_path.is_empty():
+		return {"ok": false, "error": "Missing animTreePath"}
+	if from_state.is_empty() or to_state.is_empty():
+		return {"ok": false, "error": "Missing fromState or toState"}
+
+	var loaded := _load_scene(scene_path)
+	if not loaded[1].is_empty():
+		return loaded[1]
+
+	var scene_root: Node = loaded[0]
+	var anim_tree = _find_node(scene_root, anim_tree_path) as AnimationTree
+	if not anim_tree:
+		scene_root.queue_free()
+		return {"ok": false, "error": "AnimationTree not found at: " + anim_tree_path}
+
+	var sm := _get_state_machine(anim_tree, state_machine_path)
+	if not sm:
+		scene_root.queue_free()
+		return {"ok": false, "error": "AnimationNodeStateMachine not found"}
+
+	var transition := AnimationNodeStateMachineTransition.new()
+	match transition_type:
+		"sync": transition.switch_mode = AnimationNodeStateMachineTransition.SWITCH_MODE_SYNC
+		"at_end": transition.switch_mode = AnimationNodeStateMachineTransition.SWITCH_MODE_AT_END
+		"immediate": transition.switch_mode = AnimationNodeStateMachineTransition.SWITCH_MODE_IMMEDIATE
+		_:
+			scene_root.queue_free()
+			return {"ok": false, "error": "Unsupported transitionType: " + transition_type}
+
+	transition.priority = priority
+	transition.auto_advance = auto_advance
+	transition.crossfade_time = crossfade
+	if not advance_condition.is_empty():
+		transition.advance_condition = StringName(advance_condition)
+
+	sm.add_transition(StringName(from_state), StringName(to_state), transition)
+
+	var save_err := _save_scene(scene_root, scene_path)
+	if not save_err.is_empty():
+		return save_err
+
+	return {"ok": true, "from": from_state, "to": to_state, "transitionType": transition_type}
+
+
+# =============================================================================
+# remove_state_machine_transition
+# =============================================================================
+func remove_state_machine_transition(args: Dictionary) -> Dictionary:
+	var scene_path: String = _ensure_res_path(str(args.get("scenePath", "")))
+	var anim_tree_path: String = str(args.get("animTreePath", ""))
+	var from_state: String = str(args.get("fromState", ""))
+	var to_state: String = str(args.get("toState", ""))
+	var state_machine_path: String = str(args.get("stateMachinePath", ""))
+
+	if scene_path.strip_edges() == "res://":
+		return {"ok": false, "error": "Missing scenePath"}
+	if anim_tree_path.is_empty():
+		return {"ok": false, "error": "Missing animTreePath"}
+	if from_state.is_empty() or to_state.is_empty():
+		return {"ok": false, "error": "Missing fromState or toState"}
+
+	var loaded := _load_scene(scene_path)
+	if not loaded[1].is_empty():
+		return loaded[1]
+
+	var scene_root: Node = loaded[0]
+	var anim_tree = _find_node(scene_root, anim_tree_path) as AnimationTree
+	if not anim_tree:
+		scene_root.queue_free()
+		return {"ok": false, "error": "AnimationTree not found at: " + anim_tree_path}
+
+	var sm := _get_state_machine(anim_tree, state_machine_path)
+	if not sm:
+		scene_root.queue_free()
+		return {"ok": false, "error": "AnimationNodeStateMachine not found"}
+
+	var removed := false
+	for i in range(sm.get_transition_count() - 1, -1, -1):
+		var t := sm.get_transition(i)
+		if t.from_node == from_state and t.to_node == to_state:
+			sm.remove_transition(i)
+			removed = true
+			break
+
+	if not removed:
+		scene_root.queue_free()
+		return {"ok": false, "error": "Transition not found from '" + from_state + "' to '" + to_state + "'"}
+
+	var save_err := _save_scene(scene_root, scene_path)
+	if not save_err.is_empty():
+		return save_err
+
+	return {"ok": true, "from": from_state, "to": to_state, "removed": true}
+
+
+# =============================================================================
+# set_blend_tree_node
+# =============================================================================
+func set_blend_tree_node(args: Dictionary) -> Dictionary:
+	var scene_path: String = _ensure_res_path(str(args.get("scenePath", "")))
+	var anim_tree_path: String = str(args.get("animTreePath", ""))
+	var node_name: String = str(args.get("nodeName", ""))
+	var node_type: String = str(args.get("nodeType", ""))
+	var position: Dictionary = args.get("position", {"x": 0, "y": 0})
+	var inputs: Array = args.get("inputs", [])
+	var blend: float = float(args.get("blend", 0.5))
+	var state_machine_path: String = str(args.get("stateMachinePath", ""))
+
+	if scene_path.strip_edges() == "res://":
+		return {"ok": false, "error": "Missing scenePath"}
+	if anim_tree_path.is_empty():
+		return {"ok": false, "error": "Missing animTreePath"}
+	if node_name.is_empty():
+		return {"ok": false, "error": "Missing nodeName"}
+
+	var loaded := _load_scene(scene_path)
+	if not loaded[1].is_empty():
+		return loaded[1]
+
+	var scene_root: Node = loaded[0]
+	var anim_tree = _find_node(scene_root, anim_tree_path) as AnimationTree
+	if not anim_tree:
+		scene_root.queue_free()
+		return {"ok": false, "error": "AnimationTree not found at: " + anim_tree_path}
+
+	var root = anim_tree.tree_root as AnimationNodeBlendTree
+	if not root:
+		scene_root.queue_free()
+		return {"ok": false, "error": "tree_root is not an AnimationNodeBlendTree"}
+
+	if node_type.is_empty():
+		if root.has_node(StringName(node_name)):
+			var existing_node = root.get_node(StringName(node_name))
+			if existing_node.has_method("set_input_port_count") and inputs.size() > 0:
+				existing_node.call("set_input_port_count", inputs.size())
+			if existing_node.has_method("set_blend_position"):
+				existing_node.call("set_blend_position", Vector2(float(position.get("x", 0)), float(position.get("y", 0))))
+			if existing_node.has_method("set_blend_time"):
+				existing_node.call("set_blend_time", float(blend))
+			var save_err := _save_scene(scene_root, scene_path)
+			if not save_err.is_empty():
+				return save_err
+			return {"ok": true, "nodeName": node_name, "updated": true}
+		scene_root.queue_free()
+		return {"ok": false, "error": "Node not found and no nodeType specified"}
+
+	var new_node: AnimationNode = null
+	match node_type:
+		"Animation": new_node = AnimationNodeAnimation.new()
+		"Blend1": new_node = AnimationNodeBlend1.new()
+		"Blend2": new_node = AnimationNodeBlend2.new()
+		"Blend3": new_node = AnimationNodeBlend3.new()
+		"Blend4": new_node = AnimationNodeBlend4.new()
+		"BlendSpace1D": new_node = AnimationNodeBlendSpace1D.new()
+		"BlendSpace2D": new_node = AnimationNodeBlendSpace2D.new()
+		"ClipOneShot": new_node = AnimationNodeClipOneShot.new()
+		"StateMachine": new_node = AnimationNodeStateMachine.new()
+		"TimeSeek": new_node = AnimationNodeTimeSeek.new()
+		"TimeScale": new_node = AnimationNodeTimeScale.new()
+		"Transition": new_node = AnimationNodeTransition.new()
+		_:
+			scene_root.queue_free()
+			return {"ok": false, "error": "Unsupported nodeType: " + node_type}
+
+	new_node.name = node_name
+	new_node.set_position(Vector2(float(position.get("x", 0)), float(position.get("y", 0))))
+
+	root.add_node(StringName(node_name), new_node)
+
+	var save_err := _save_scene(scene_root, scene_path)
+	if not save_err.is_empty():
+		return save_err
+
+	return {"ok": true, "nodeName": node_name, "nodeType": node_type}
+
+
+# =============================================================================
+# set_tree_parameter
+# =============================================================================
+func set_tree_parameter(args: Dictionary) -> Dictionary:
+	var scene_path: String = _ensure_res_path(str(args.get("scenePath", "")))
+	var anim_tree_path: String = str(args.get("animTreePath", ""))
+	var parameter_path: String = str(args.get("parameterPath", ""))
+	var value = args.get("value")
+	var value_type: String = str(args.get("valueType", ""))
+
+	if scene_path.strip_edges() == "res://":
+		return {"ok": false, "error": "Missing scenePath"}
+	if anim_tree_path.is_empty():
+		return {"ok": false, "error": "Missing animTreePath"}
+	if parameter_path.is_empty():
+		return {"ok": false, "error": "Missing parameterPath"}
+
+	var loaded := _load_scene(scene_path)
+	if not loaded[1].is_empty():
+		return loaded[1]
+
+	var scene_root: Node = loaded[0]
+	var anim_tree = _find_node(scene_root, anim_tree_path) as AnimationTree
+	if not anim_tree:
+		scene_root.queue_free()
+		return {"ok": false, "error": "AnimationTree not found at: " + anim_tree_path}
+
+	if not anim_tree.has(Control.PROPERTY_USAGE-editor):
+		if not anim_tree.has_property(property_path):
+			scene_root.queue_free()
+			return {"ok": false, "error": "Parameter not found: " + parameter_path}
+
+	var parsed_value = _parse_json_maybe(value) if typeof(value) == TYPE_STRING else value
+	parsed_value = _parse_value(parsed_value)
+
+	if not anim_tree.has_parameter(StringName(parameter_path)):
+		anim_tree.add_parameter(StringName(parameter_path))
+
+	anim_tree.set_parameter(StringName(parameter_path), parsed_value)
+
+	var save_err := _save_scene(scene_root, scene_path)
+	if not save_err.is_empty():
+		return save_err
+
+	return {"ok": true, "parameterPath": parameter_path, "value": parsed_value}

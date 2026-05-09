@@ -3239,6 +3239,230 @@ export function buildToolDefinitions(godotBridgePort: number): MCPToolDefinition
             required: ['projectPath'],
           },
         },
+        // Phase 4 — Animation tree depth tools
+        {
+          name: 'get_animation_tree_structure',
+          description: 'Read the structure of an AnimationTree node: root type, states/transitions (for StateMachine), or blend nodes/connections (for BlendTree).',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Path to the .tscn file containing the AnimationTree.' },
+              animTreePath: { type: 'string', description: 'Node path to the AnimationTree within the scene (e.g., "AnimationTree" or "Player/AnimationTree").' },
+            },
+            required: ['projectPath', 'scenePath', 'animTreePath'],
+          },
+        },
+        {
+          name: 'add_state_machine_state',
+          description: 'Add a named state to an AnimationNodeStateMachine. Optionally bind an animation. Fails if the state already exists.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Path to the .tscn file.' },
+              animTreePath: { type: 'string', description: 'Node path to the AnimationTree.' },
+              stateName: { type: 'string', description: 'Name for the new state.' },
+              stateMachinePath: { type: 'string', description: 'Path to the state machine within the tree (empty for root).' },
+              animationName: { type: 'string', description: 'Optional animation to bind to the state.' },
+            },
+            required: ['projectPath', 'scenePath', 'animTreePath', 'stateName'],
+          },
+        },
+        {
+          name: 'remove_state_machine_state',
+          description: 'Remove a named state from an AnimationNodeStateMachine. Removes all transitions to/from the state.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Path to the .tscn file.' },
+              animTreePath: { type: 'string', description: 'Node path to the AnimationTree.' },
+              stateName: { type: 'string', description: 'Name of the state to remove.' },
+              stateMachinePath: { type: 'string', description: 'Path to the state machine within the tree.' },
+            },
+            required: ['projectPath', 'scenePath', 'animTreePath', 'stateName'],
+          },
+        },
+        {
+          name: 'add_state_machine_transition',
+          description: 'Add a transition between two states in an AnimationNodeStateMachine with full control over priority, auto-advance, crossfade, and advance condition.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Path to the .tscn file.' },
+              animTreePath: { type: 'string', description: 'Node path to the AnimationTree.' },
+              fromState: { type: 'string', description: 'Source state name.' },
+              toState: { type: 'string', description: 'Target state name.' },
+              transitionType: { type: 'string', description: 'Switch mode: "immediate", "sync", or "at_end". Default: "immediate".' },
+              stateMachinePath: { type: 'string', description: 'Path to the state machine within the tree.' },
+              advanceCondition: { type: 'string', description: 'Boolean parameter name that gates auto-advance.' },
+              priority: { type: 'number', description: 'Transition priority (higher fires first). Default: 0.' },
+              autoAdvance: { type: 'boolean', description: 'Whether to auto-advance when the state finishes. Default: true.' },
+              crossfade: { type: 'number', description: 'Crossfade time in seconds. Default: 0.' },
+            },
+            required: ['projectPath', 'scenePath', 'animTreePath', 'fromState', 'toState'],
+          },
+        },
+        {
+          name: 'remove_state_machine_transition',
+          description: 'Remove a specific transition between two states in an AnimationNodeStateMachine.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Path to the .tscn file.' },
+              animTreePath: { type: 'string', description: 'Node path to the AnimationTree.' },
+              fromState: { type: 'string', description: 'Source state name.' },
+              toState: { type: 'string', description: 'Target state name.' },
+              stateMachinePath: { type: 'string', description: 'Path to the state machine within the tree.' },
+            },
+            required: ['projectPath', 'scenePath', 'animTreePath', 'fromState', 'toState'],
+          },
+        },
+        {
+          name: 'set_blend_tree_node',
+          description: 'Add or configure a blend-tree node (Animation, Blend1/2/3/4, BlendSpace1D/2D, ClipOneShot, StateMachine, TimeSeek, TimeScale, Transition). Sets position and optionally configures inputs/blend on existing nodes.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Path to the .tscn file.' },
+              animTreePath: { type: 'string', description: 'Node path to the AnimationTree.' },
+              nodeName: { type: 'string', description: 'Name of the node to add or configure.' },
+              nodeType: { type: 'string', description: 'Type when creating a new node. Omit to configure an existing node.' },
+              position: { type: 'object', description: 'Position {x, y} in the blend tree editor.', properties: { x: { type: 'number' }, y: { type: 'number' } } },
+              inputs: { type: 'array', items: { type: 'string' }, description: 'Input port names when creating.' },
+              blend: { type: 'number', description: 'Blend time/position when configuring existing node.' },
+              stateMachinePath: { type: 'string', description: 'Path to the blend tree or state machine.' },
+            },
+            required: ['projectPath', 'scenePath', 'animTreePath', 'nodeName'],
+          },
+        },
+        {
+          name: 'set_tree_parameter',
+          description: 'Set or add an AnimationTree parameter (bool/float/int/vector). If the parameter does not exist, it is created.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Path to the .tscn file.' },
+              animTreePath: { type: 'string', description: 'Node path to the AnimationTree.' },
+              parameterPath: { type: 'string', description: 'Parameter path (e.g., "parameters/Blend2/blend_amount").' },
+              value: { type: 'string', description: 'JSON value to set (bool, number, Vector2, etc.).' },
+              valueType: { type: 'string', description: 'Expected type hint (e.g., "float", "bool").' },
+            },
+            required: ['projectPath', 'scenePath', 'animTreePath', 'parameterPath', 'value'],
+          },
+        },
+        // Phase 4 — Node ergonomics tools
+        {
+          name: 'move_node',
+          description: 'Reorder a node among its siblings by changing its child index in the parent. Useful for z-ordering in 2D or draw order in 3D.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Path to the .tscn file.' },
+              nodePath: { type: 'string', description: 'Node path to move.' },
+              newIndex: { type: 'number', description: 'New sibling index (0 = first child).' },
+            },
+            required: ['projectPath', 'scenePath', 'nodePath', 'newIndex'],
+          },
+        },
+        {
+          name: 'rename_node',
+          description: 'Rename a node in the scene tree. The node path changes accordingly.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Path to the .tscn file.' },
+              nodePath: { type: 'string', description: 'Current node path.' },
+              newName: { type: 'string', description: 'New node name.' },
+            },
+            required: ['projectPath', 'scenePath', 'nodePath', 'newName'],
+          },
+        },
+        {
+          name: 'set_anchor_preset',
+          description: 'Set the anchor preset on a Control node (affects how margins are interpreted). Supports all standard presets: None, FullRect, Center, Left/Right/Top/Bottom variants.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Path to the .tscn file.' },
+              nodePath: { type: 'string', description: 'Node path to a Control node.' },
+              anchorPreset: { type: 'string', description: 'Preset name: None, FullRect, CenterLeft/Top/Right/Bottom, Center, LeftTop/Center/Bottom, RightTop/Center/Bottom, TopCenter, BottomCenter.' },
+              keepMargins: { type: 'boolean', description: 'If true, keeps current margin values after changing anchor.' },
+            },
+            required: ['projectPath', 'scenePath', 'nodePath', 'anchorPreset'],
+          },
+        },
+        // Phase 4 — Resource tools
+        {
+          name: 'read_resource',
+          description: 'Read a resource file (.tres, .gd, etc.) and return its type and all serializable properties as key-value pairs.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              resourcePath: { type: 'string', description: 'Path to the resource file (res:// path or relative).' },
+            },
+            required: ['projectPath', 'resourcePath'],
+          },
+        },
+        {
+          name: 'edit_resource',
+          description: 'Update properties on an existing resource file and save it.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              resourcePath: { type: 'string', description: 'Path to the resource file.' },
+              properties: { type: 'string', description: 'JSON object of properties to update.' },
+            },
+            required: ['projectPath', 'resourcePath', 'properties'],
+          },
+        },
+        // Phase 4 — Editor utility tools
+        {
+          name: 'execute_editor_script',
+          description: 'Execute arbitrary GDScript code within the active editor context. The script receives the edited scene root and editor interface as context. Must define a `_execute(ctx)` method.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scriptCode: { type: 'string', description: 'GDScript source code with a `_execute(ctx)` function.' },
+            },
+            required: ['projectPath', 'scriptCode'],
+          },
+        },
+        {
+          name: 'clear_output',
+          description: 'Clear the editor Output dock. No-op in headless mode.',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+          },
+        },
+        {
+          name: 'reload_plugin',
+          description: 'Trigger a rescan of the resource filesystem. Useful after creating new files outside the editor.',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+          },
+        },
+        {
+          name: 'reload_project',
+          description: 'Trigger a full project reload (rescan filesystem and reload all open scenes).',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+          },
+        },
         // Godot LSP Tools (GDScript diagnostics via Godot editor LSP on port 6005)
         ...createLSPTools(),
         // Godot DAP Tools (Debug Adapter Protocol via Godot editor DAP on port 6006)

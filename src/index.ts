@@ -1829,6 +1829,42 @@ class GodotServer {
           return await this.handleDetectCircularDependencies(request.params.arguments);
         case 'get_project_statistics':
           return await this.handleGetProjectStatistics(request.params.arguments);
+        // Phase 4 — animation tree depth tools
+        case 'get_animation_tree_structure':
+          return await this.handleViaBridge('get_animation_tree_structure', normalizedArgs);
+        case 'add_state_machine_state':
+          return await this.handleViaBridge('add_state_machine_state', normalizedArgs);
+        case 'remove_state_machine_state':
+          return await this.handleViaBridge('remove_state_machine_state', normalizedArgs);
+        case 'add_state_machine_transition':
+          return await this.handleViaBridge('add_state_machine_transition', normalizedArgs);
+        case 'remove_state_machine_transition':
+          return await this.handleViaBridge('remove_state_machine_transition', normalizedArgs);
+        case 'set_blend_tree_node':
+          return await this.handleViaBridge('set_blend_tree_node', normalizedArgs);
+        case 'set_tree_parameter':
+          return await this.handleViaBridge('set_tree_parameter', normalizedArgs);
+        // Phase 4 — node ergonomics tools
+        case 'move_node':
+          return await this.handleViaBridge('move_node', normalizedArgs);
+        case 'rename_node':
+          return await this.handleViaBridge('rename_node', normalizedArgs);
+        case 'set_anchor_preset':
+          return await this.handleViaBridge('set_anchor_preset', normalizedArgs);
+        // Phase 4 — resource tools
+        case 'read_resource':
+          return await this.handleViaBridge('read_resource', normalizedArgs);
+        case 'edit_resource':
+          return await this.handleViaBridge('edit_resource', normalizedArgs);
+        // Phase 4 — editor utility tools
+        case 'execute_editor_script':
+          return await this.handleViaBridge('execute_editor_script', normalizedArgs);
+        case 'clear_output':
+          return await this.handleViaBridge('clear_output', normalizedArgs);
+        case 'reload_plugin':
+          return await this.handleViaBridge('reload_plugin', normalizedArgs);
+        case 'reload_project':
+          return await this.handleViaBridge('reload_project', normalizedArgs);
         case 'lsp_get_diagnostics':
         case 'lsp_get_completions':
         case 'lsp_get_hover':

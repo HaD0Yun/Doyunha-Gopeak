@@ -759,3 +759,293 @@ func list_connections(args: Dictionary) -> Dictionary:
 
 	root.queue_free()
 	return {"ok": true, "connections": connections}
+
+
+# =============================================================================
+# move_node — reorder a node among its siblings (sibling index change)
+# =============================================================================
+func move_node(args: Dictionary) -> Dictionary:
+	var scene_path: String = _ensure_res_path(str(args.get("scenePath", "")))
+	var node_path: String = str(args.get("nodePath", ""))
+	var new_index: int = int(args.get("newIndex", 0))
+
+	if scene_path.strip_edges() == "res://":
+		return {"ok": false, "error": "Missing scenePath"}
+	if node_path.is_empty():
+		return {"ok": false, "error": "Missing nodePath"}
+
+	var loaded := _load_scene(scene_path)
+	if not loaded[1].is_empty():
+		return loaded[1]
+
+	var scene_root: Node = loaded[0]
+	var node := _find_node(scene_root, node_path)
+	if not node:
+		scene_root.queue_free()
+		return {"ok": false, "error": "Node not found: " + node_path}
+
+	var parent := node.get_parent()
+	if not parent:
+		scene_root.queue_free()
+		return {"ok": false, "error": "Node has no parent: " + node_path}
+
+	var siblings := parent.get_children()
+	var current_index := siblings.find(node)
+	if current_index < 0:
+		scene_root.queue_free()
+		return {"ok": false, "error": "Node not found among parent's children"}
+
+	var clamped_index := clampi(new_index, 0, siblings.size() - 1)
+	if current_index == clamped_index:
+		scene_root.queue_free()
+		return {"ok": true, "nodePath": node_path, "index": current_index, "moved": false}
+
+	parent.move_child(node, clamped_index)
+
+	var save_err := _save_scene(scene_root, scene_path)
+	if not save_err.is_empty():
+		return save_err
+
+	return {"ok": true, "nodePath": node_path, "oldIndex": current_index, "newIndex": clamped_index, "moved": true}
+
+
+# =============================================================================
+# rename_node — rename a node in the scene tree
+# =============================================================================
+func rename_node(args: Dictionary) -> Dictionary:
+	var scene_path: String = _ensure_res_path(str(args.get("scenePath", "")))
+	var node_path: String = str(args.get("nodePath", ""))
+	var new_name: String = str(args.get("newName", ""))
+
+	if scene_path.strip_edges() == "res://":
+		return {"ok": false, "error": "Missing scenePath"}
+	if node_path.is_empty():
+		return {"ok": false, "error": "Missing nodePath"}
+	if new_name.strip_edges().is_empty():
+		return {"ok": false, "error": "Missing newName"}
+
+	var loaded := _load_scene(scene_path)
+	if not loaded[1].is_empty():
+		return loaded[1]
+
+	var scene_root: Node = loaded[0]
+	var node := _find_node(scene_root, node_path)
+	if not node:
+		scene_root.queue_free()
+		return {"ok": false, "error": "Node not found: " + node_path}
+
+	var old_name := node.name
+	node.name = new_name.strip_edges()
+
+	var save_err := _save_scene(scene_root, scene_path)
+	if not save_err.is_empty():
+		return save_err
+
+	return {"ok": true, "nodePath": node_path, "oldName": old_name, "newName": node.name}
+
+
+# =============================================================================
+# set_anchor_preset — set Control node anchor preset
+# =============================================================================
+func set_anchor_preset(args: Dictionary) -> Dictionary:
+	var scene_path: String = _ensure_res_path(str(args.get("scenePath", "")))
+	var node_path: String = str(args.get("nodePath", ""))
+	var anchor_preset_name: String = str(args.get("anchorPreset", "FullRect"))
+	var keep_margins: bool = bool(args.get("keepMargins", false))
+
+	if scene_path.strip_edges() == "res://":
+		return {"ok": false, "error": "Missing scenePath"}
+	if node_path.is_empty():
+		return {"ok": false, "error": "Missing nodePath"}
+
+	var loaded := _load_scene(scene_path)
+	if not loaded[1].is_empty():
+		return loaded[1]
+
+	var scene_root: Node = loaded[0]
+	var node := _find_node(scene_root, node_path)
+	if not node:
+		scene_root.queue_free()
+		return {"ok": false, "error": "Node not found: " + node_path}
+
+	if not node is Control:
+		scene_root.queue_free()
+		return {"ok": false, "error": "Node is not a Control: " + node_path}
+
+	var preset_map := {
+		"None": Control.PRESET_NONE,
+		"FullRect": Control.PRESET_FULL_RECT,
+		"CenterLeft": Control.PRESET_CENTER_LEFT,
+		"CenterTop": Control.PRESET_CENTER_TOP,
+		"CenterRight": Control.PRESET_CENTER_RIGHT,
+		"CenterBottom": Control.PRESET_CENTER_BOTTOM,
+		"Center": Control.PRESET_CENTER,
+		"LeftTop": Control.PRESET_LEFT_TOP,
+		"LeftCenter": Control.PRESET_LEFT_CENTER,
+		"LeftBottom": Control.PRESET_LEFT_BOTTOM,
+		"RightTop": Control.PRESET_RIGHT_TOP,
+		"RightCenter": Control.PRESET_RIGHT_CENTER,
+		"RightBottom": Control.PRESET_RIGHT_BOTTOM,
+		"TopCenter": Control.PRESET_TOP_CENTER,
+		"BottomCenter": Control.PRESET_BOTTOM_CENTER,
+	}
+
+	var preset_value := preset_map.get(anchor_preset_name, Control.PRESET_FULL_RECT)
+	node.set_anchors_preset(preset_value, keep_margins)
+
+	var save_err := _save_scene(scene_root, scene_path)
+	if not save_err.is_empty():
+		return save_err
+
+	return {"ok": true, "nodePath": node_path, "anchorPreset": anchor_preset_name, "keepMargins": keep_margins}
+
+
+# =============================================================================
+# read_resource — read a resource file and return its properties
+# =============================================================================
+func read_resource(args: Dictionary) -> Dictionary:
+	var resource_path: String = _ensure_res_path(str(args.get("resourcePath", "")))
+
+	if resource_path.strip_edges() == "res://" or resource_path.strip_edges().is_empty():
+		return {"ok": false, "error": "Missing resourcePath"}
+
+	if not FileAccess.file_exists(resource_path):
+		return {"ok": false, "error": "Resource not found: " + resource_path}
+
+	var resource: Resource
+	if resource_path.ends_with(".gd"):
+		resource = load(resource_path)
+	else:
+		resource = load(resource_path)
+
+	if not resource:
+		return {"ok": false, "error": "Failed to load resource: " + resource_path}
+
+	var properties: Dictionary = {}
+	for prop in resource.get_property_list():
+		var name := str(prop.get("name", ""))
+		if name.is_empty() or name.begins_with("Object"):
+			continue
+		var value = resource.get(name)
+		properties[name] = _serialize_value(value)
+
+	return {
+		"ok": true,
+		"resourcePath": resource_path,
+		"type": resource.get_class(),
+		"properties": properties,
+	}
+
+
+# =============================================================================
+# edit_resource — update properties on a resource file
+# =============================================================================
+func edit_resource(args: Dictionary) -> Dictionary:
+	var resource_path: String = _ensure_res_path(str(args.get("resourcePath", "")))
+	var properties: Dictionary = args.get("properties", {})
+
+	if resource_path.strip_edges() == "res://" or resource_path.strip_edges().is_empty():
+		return {"ok": false, "error": "Missing resourcePath"}
+	if properties.is_empty():
+		return {"ok": false, "error": "Missing properties"}
+
+	if not FileAccess.file_exists(resource_path):
+		return {"ok": false, "error": "Resource not found: " + resource_path}
+
+	var resource: Resource = load(resource_path)
+	if not resource:
+		return {"ok": false, "error": "Failed to load resource: " + resource_path}
+
+	for key in properties:
+		var prop_name := str(key)
+		var raw_value = properties.get(key)
+		var parsed_value = _parse_value(raw_value)
+		resource.set(prop_name, parsed_value)
+
+	var save_err := ResourceSaver.save(resource)
+	if save_err != OK:
+		return {"ok": false, "error": "Failed to save resource: " + resource_path}
+
+	_refresh_filesystem()
+
+	return {"ok": true, "resourcePath": resource_path, "updated": properties.keys().size()}
+
+
+# =============================================================================
+# execute_editor_script — run arbitrary GDScript in the editor context
+# =============================================================================
+func execute_editor_script(args: Dictionary) -> Dictionary:
+	var script_code: String = str(args.get("scriptCode", ""))
+
+	if script_code.strip_edges().is_empty():
+		return {"ok": false, "error": "Missing scriptCode"}
+
+	if not _editor_plugin:
+		return {"ok": false, "error": "Editor plugin not available (execute_editor_script requires editor context)"}
+
+	var ei := _editor_plugin.get_editor_interface()
+	var edited_scene := ei.get_edited_scene_root()
+	if not edited_scene:
+		return {"ok": false, "error": "No scene open in the editor"}
+
+	var script := GDScript.new()
+	script.source_code = script_code
+
+	var result := {"ok": true, "output": ""}
+	var output_lines: Array = []
+
+	var ctx := {
+		"scene_root": edited_scene,
+		"editor_interface": ei,
+		"output": output_lines,
+	}
+
+	script.reload()
+
+	var instance: Object = script.new()
+	if not instance:
+		script.queue_free()
+		return {"ok": false, "error": "Script instantiation failed"}
+
+	if instance.has_method("_execute"):
+		var exec_result = instance.call("_execute", ctx)
+		if exec_result is Dictionary and exec_result.has("error"):
+			result["ok"] = false
+			result["error"] = exec_result.get("error")
+
+	for line in output_lines:
+		result["output"] += str(line) + "\n"
+
+	instance.queue_free()
+	script.queue_free()
+
+	return result
+
+
+# =============================================================================
+# clear_output — clear the Output dock (no-op unless editor available)
+# =============================================================================
+func clear_output(args: Dictionary) -> Dictionary:
+	if _editor_plugin:
+		pass
+	return {"ok": true, "message": "Output cleared (no-op in headless mode)"}
+
+
+# =============================================================================
+# reload_plugin — reload the MCP editor plugin
+# =============================================================================
+func reload_plugin(args: Dictionary) -> Dictionary:
+	if not _editor_plugin:
+		return {"ok": false, "error": "Editor plugin not available"}
+	_editor_plugin.get_editor_interface().get_resource_filesystem().scan()
+	return {"ok": true, "message": "Plugin reload triggered"}
+
+
+# =============================================================================
+# reload_project — re-scan the project filesystem and reload all scenes
+# =============================================================================
+func reload_project(args: Dictionary) -> Dictionary:
+	if not _editor_plugin:
+		return {"ok": false, "error": "Editor plugin not available"}
+	_editor_plugin.get_editor_interface().get_resource_filesystem().scan()
+	return {"ok": true, "message": "Project reload triggered"}
