@@ -2375,7 +2375,6 @@ export function buildToolDefinitions(godotBridgePort: number): MCPToolDefinition
               scenePath: { type: 'string', description: 'Path to the scene file' },
               parentNodePath: { type: 'string', description: 'Path to the parent node' },
               nodeName: { type: 'string', description: 'Name for the Camera2D node' },
-              targetPath: { type: 'string', description: 'Path to a node for the camera to follow' },
               position: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' } }, description: 'Camera position as Vector2' },
               zoom: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' } }, description: 'Camera zoom level' },
               limits: { type: 'array', items: { type: 'number' }, description: 'Camera limits [left, top, right, bottom]' },

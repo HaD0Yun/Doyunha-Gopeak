@@ -182,7 +182,6 @@ func setup_camera_2d(args: Dictionary) -> Dictionary:
 	var scene_path: String = args.get("scenePath", "")
 	var parent_node_path: String = args.get("parentNodePath", ".")
 	var node_name: String = args.get("nodeName", "Camera2D")
-	var target_path: String = args.get("targetPath", "")
 	var zoom: Dictionary = args.get("zoom", {"x": 1, "y": 1})
 	var limits: Array = args.get("limits", [])
 	var smoothing: float = args.get("smoothing", 0.0)
