@@ -238,64 +238,67 @@ UI prototypes in a few calls instead of dozens.
 - Lets M2 ship 3D scaffolding on a tight schedule, while 2D ships in
   M2.5 / M3.
 
-### Phase 3 — Cross-scene refactor & code analysis  **[NOT STARTED]**
+### Phase 3 — Cross-scene refactor & code analysis  **[DONE]**
 
 Goal: enable the AI to do safe project-wide changes and reason about the
 shape of the project.
 
 **New tools:**
 - Refactor:
-  - [ ] `find_node_references`
-  - [ ] `find_signal_connections`
-  - [ ] `find_nodes_by_type`
-  - [ ] `cross_scene_set_property`
-  - [ ] `batch_set_property`
-  - [ ] `get_scene_dependencies`
+  - [x] `find_node_references`
+  - [x] `find_signal_connections`
+  - [x] `find_nodes_by_type`
+  - [x] `cross_scene_set_property`
+  - [x] `batch_set_property`
+  - [x] `get_scene_dependencies`
 - Analysis:
-  - [ ] `find_unused_resources`
-  - [ ] `analyze_signal_flow`
-  - [ ] `analyze_scene_complexity`
-  - [ ] `find_script_references`
-  - [ ] `detect_circular_dependencies`
-  - [ ] `get_project_statistics`
+  - [x] `find_unused_resources`
+  - [x] `analyze_signal_flow`
+  - [x] `analyze_scene_complexity`
+  - [x] `find_script_references`
+  - [x] `detect_circular_dependencies`
+  - [x] `get_project_statistics`
 
 **Where it lives:**
-- `src/tools/refactor.ts` — bridge-backed for live edits, falls back to
-  filesystem scan of `.tscn`/`.gd` for read-only queries (reuse
-  `gdscript_parser.ts`).
+- `src/tools/refactor.ts` — bridge-backed for live edits, pure FS fallback
+  for read-only queries (reuse `gdscript_parser.ts`).
 - `src/tools/code_analysis.ts` — pure FS analysis; no editor required.
   Important so analysis works in CI / pre-commit contexts.
 - New groups `refactor`, `code_analysis`.
 
-### Phase 4 — Animation tree depth & ergonomics  **[NOT STARTED]**
+### Phase 4 — Animation tree depth & ergonomics  **[DONE]**
 
 Goal: round out animation-tree authoring and small node ergonomics.
 
 **New tools:**
 - AnimationTree:
-  - [ ] `get_animation_tree_structure`
-  - [ ] `add_state_machine_state`
-  - [ ] `remove_state_machine_state`
-  - [ ] `add_state_machine_transition`
-  - [ ] `remove_state_machine_transition`
-  - [ ] `set_blend_tree_node`
-  - [ ] `set_tree_parameter`
+  - [x] `get_animation_tree_structure`
+  - [x] `add_state_machine_state`
+  - [x] `remove_state_machine_state`
+  - [x] `add_state_machine_transition`
+  - [x] `remove_state_machine_transition`
+  - [x] `set_blend_tree_node`
+  - [x] `set_tree_parameter`
 - Node ergonomics:
-  - [ ] `move_node` (reorder among siblings)
-  - [ ] `rename_node`
-  - [ ] `set_anchor_preset`
+  - [x] `move_node` (reorder among siblings)
+  - [x] `rename_node`
+  - [x] `set_anchor_preset`
 - Resource:
-  - [ ] `read_resource`
-  - [ ] `edit_resource`
+  - [x] `read_resource`
+  - [x] `edit_resource`
 - Editor utilities:
-  - [ ] `execute_editor_script`
-  - [ ] `clear_output`
-  - [ ] `reload_plugin`
-  - [ ] `reload_project`
+  - [x] `execute_editor_script`
+  - [x] `clear_output`
+  - [x] `reload_plugin`
+  - [x] `reload_project`
 
 **Where it lives:**
-- Extend the existing `animation` group; add a new `editor_utility` group
+- Extend the existing `animation` group; add `node_ergonomics` and `editor_utility` groups
   for the editor-side helpers.
+- AnimationTree tools via `src/addon/godot_mcp_editor/tools/animation_tools.gd`
+  (bridge-backed via `tool_executor.gd`).
+- Node ergonomics, resource, and utility tools via `src/addon/godot_mcp_editor/tools/scene_tools.gd`
+  (bridge-backed via `tool_executor.gd`).
 
 ## 4. Architecture Notes
 
@@ -339,8 +342,8 @@ Goal: round out animation-tree authoring and small node ergonomics.
 | M1 — Closed loop | 1 | DONE | AI can run a scenario and self-grade it |
 | M2 — 3D-ready scaffolding | 1 + 2 | DONE | AI can build a 3D test bed and run scenarios on it |
 | M2.5 — 2D scaffolding | 1 + 2b | DONE | First-class 2D scene scaffolding |
-| M3 — Project intelligence | 1–3 | NOT STARTED | AI can refactor across scenes safely |
-| M4 — Full closed loop + scaffolding | 1–4 | NOT STARTED | Complete AI-build / AI-run surface, plus 2D scaffolding |
+| M3 — Project intelligence | 1–3 | DONE | AI can refactor across scenes safely |
+| M4 — Full closed loop + scaffolding | 1–4 | DONE | Complete AI-build / AI-run surface, plus 2D scaffolding |
 
 Each milestone is independently shippable as a minor version bump
 (`2.4.0`, `2.5.0`, …) using the existing `scripts/bump-version.mjs`
