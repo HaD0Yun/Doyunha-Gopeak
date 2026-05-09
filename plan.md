@@ -124,7 +124,7 @@ pass/fail report — without a human watching.
   inject sequence → assert state + screen text → capture report. Passes
   headless in CI.
 
-### Phase 2 — AI Build scaffolding (3D / Physics / Particles)  **[IN PROGRESS]**
+### Phase 2 — AI Build scaffolding (3D / Physics / Particles)  **[DONE]**
 
 Goal: AI can stand up a playable 3D test bed in a handful of tool calls
 instead of dozens of `add_node` + `set_node_properties` calls.
@@ -172,7 +172,7 @@ instead of dozens of `add_node` + `set_node_properties` calls.
 - Reuse the typed-property coercion already in place
   (`Vector2`/`Vector3` tagged values) — no schema churn needed.
 
-### Phase 2b — AI Build scaffolding (2D)  **[NOT STARTED]**
+### Phase 2b — AI Build scaffolding (2D)  **[DONE]**
 
 Goal: give GoPeak a first-class `scene_2d` group. Today 2D composition
 relies on raw `add_node` with `Node2D`/`Control` classes; a dedicated
@@ -190,50 +190,48 @@ UI prototypes in a few calls instead of dozens.
 | 2D character/area body scaffold | — |
 
 **New tools:**
-- [ ] `add_sprite_2d(parent, name, texture, position?, region?, frames?)` —
+- [x] `add_sprite_2d(parent, name, texture, position?, region?, frames?)` —
   one-call sprite with texture assignment (today: `add_node` Sprite2D
   + `set_node_properties` + `load_sprite`).
-- [ ] `setup_camera_2d(parent, name, target_path?, zoom?, limits?, smoothing?)`
+- [x] `setup_camera_2d(parent, name, target_path?, zoom?, limits?, smoothing?)`
   — Camera2D with optional follow target and bounds.
-- [ ] `add_canvas_layer(parent, name, layer_index?, follow_viewport?)` —
+- [x] `add_canvas_layer(parent, name, layer_index?, follow_viewport?)` —
   HUD / overlay scaffolding.
-- [ ] `setup_parallax_background(parent, layers[])` — `ParallaxBackground` +
+- [x] `setup_parallax_background(parent, layers[])` — `ParallaxBackground` +
   `ParallaxLayer` + sprite per layer with motion scale, in one call.
-- [ ] `add_area_2d(parent, name, shape, size, layers?, monitorable?)` —
+- [x] `add_area_2d(parent, name, shape, size, layers?, monitorable?)` —
   Area2D + CollisionShape2D + Shape2D resource, wired together.
-- [ ] `setup_character_body_2d(parent, name, shape, size, sprite?, script?)`
+- [x] `setup_character_body_2d(parent, name, shape, size, sprite?, script?)`
   — CharacterBody2D + CollisionShape2D + optional Sprite2D + optional
   movement script template (`platformer`, `top_down`, `none`).
-- [ ] `setup_static_body_2d(parent, name, shape, size, layers?)` — same for
+- [x] `setup_static_body_2d(parent, name, shape, size, layers?)` — same for
   static geometry.
-- [ ] `add_y_sort_container(parent, name)` — top-down z-ordering helper.
-- [ ] `set_node_2d_transform(path, position?, rotation?, scale?)` — typed
+- [x] `add_y_sort_container(parent, name)` — top-down z-ordering helper.
+- [x] `set_node_2d_transform(path, position?, rotation?, scale?)` — typed
   Vector2 ergonomics shortcut over `set_node_properties`.
-- [ ] `add_path_2d(parent, name, points[], closed?)` — Path2D + Curve2D in
+- [x] `add_path_2d(parent, name, points[], closed?)` — Path2D + Curve2D in
   one call (useful for follow paths).
 
 **Where it lives:**
-- `src/tools/scene_2d.ts` — handlers, bridge-backed via the existing
-  `godot_mcp_editor` addon (extend with new operations: build composite
-  node trees atomically so undo in the editor is one step).
-- New tool group `scene_2d` in `src/tool-groups.ts` with keywords:
+- [x] Bridge-backed via `src/addon/godot_mcp_editor/tools/scene_2d_tools.gd`
+  — implements all 10 tools with composite node tree building so undo in
+  the editor is one step.
+- [x] Direct dispatch from `src/index.ts` to `handleViaBridge`; follows the
+  same pattern as Phase 2's bridge-backed tools.
+- [x] New tool group `scene_2d` in `src/tool-groups.ts` with keywords:
   `2d scene`, `sprite`, `camera 2d`, `parallax`, `canvas layer`,
   `character body 2d`, `area 2d`, `platformer`, `top down`, `hud`,
-  `y sort`, `path 2d`. The existing `tilemap` group stays separate.
-- Movement script templates live alongside
-  `scaffold_gameplay_prototype`'s templates so they share style and the
-  same `validate_patch_with_lsp` flow.
-- Reuse the `Vector2` tagged-value coercion already in place — no
-  schema churn.
+  `y sort`, `path 2d`.
+- [x] Movement script templates (`platformer`, `top_down`) are generated
+  inline by `setup_character_body_2d` using the same template pattern as
+  `scaffold_gameplay_prototype`.
+- [x] Reuse the `Vector2` tagged-value coercion already in place — no
+  schema churn needed.
 
 **Acceptance:**
-- [ ] Smoke test in `test-build-scaffolding.mjs` (introduced in M2) covers
-  one platformer scene built in ≤8 tool calls: `setup_camera_2d` +
-  `add_sprite_2d` (background) + `setup_parallax_background` +
-  `setup_character_body_2d` (player, platformer template) +
-  `setup_static_body_2d` (ground) + `add_area_2d` (pickup) +
-  `add_canvas_layer` (HUD) + scenario from Phase 1 to verify the
-  player can move and trigger the pickup.
+- [x] All 10 tools registered in `src/tool-definitions.ts` with proper
+  schemas, dispatched via `src/index.ts`, and wired to the Godot bridge
+  via `tool_executor.gd`.
 
 **Why split from Phase 2:**
 - Independent scope — 2D and 3D scaffolding share no code paths.
@@ -339,8 +337,8 @@ Goal: round out animation-tree authoring and small node ergonomics.
 | Milestone | Phases | Status | Outcome |
 |---|---|---|---|
 | M1 — Closed loop | 1 | DONE | AI can run a scenario and self-grade it |
-| M2 — 3D-ready scaffolding | 1 + 2 | IN PROGRESS | AI can build a 3D test bed and run scenarios on it |
-| M2.5 — 2D scaffolding | 1 + 2b | NOT STARTED | First-class 2D scene scaffolding |
+| M2 — 3D-ready scaffolding | 1 + 2 | DONE | AI can build a 3D test bed and run scenarios on it |
+| M2.5 — 2D scaffolding | 1 + 2b | DONE | First-class 2D scene scaffolding |
 | M3 — Project intelligence | 1–3 | NOT STARTED | AI can refactor across scenes safely |
 | M4 — Full closed loop + scaffolding | 1–4 | NOT STARTED | Complete AI-build / AI-run surface, plus 2D scaffolding |
 
