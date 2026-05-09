@@ -119,7 +119,7 @@ func add_sprite_2d(args: Dictionary) -> Dictionary:
 	var texture_path: String = args.get("texture", "")
 	var region: Dictionary = args.get("region", {})
 	var frames: int = args.get("frames", 1)
-	var hframes: int = args.get("hframes", 1)
+	var hframes: int = args.get("hframes", 1) if args.has("hframes") else frames
 	var vframes: int = args.get("vframes", 1)
 
 	var scene_res_path := _to_scene_res_path(project_path, scene_path)
@@ -150,7 +150,7 @@ func add_sprite_2d(args: Dictionary) -> Dictionary:
 						region.get("width", tex.get_width()),
 						region.get("height", tex.get_height())
 					)
-				if frames > 1 or hframes > 1 or vframes > 1:
+				if hframes > 1 or vframes > 1:
 					sprite.hframes = hframes
 					sprite.vframes = vframes
 
@@ -158,9 +158,8 @@ func add_sprite_2d(args: Dictionary) -> Dictionary:
 	if position.has("x") or position.has("y"):
 		sprite.position = _parse_value(position, TYPE_VECTOR2)
 
-	var rotation: float = args.get("rotation", 0.0)
-	if rotation != 0.0:
-		sprite.rotation = deg_to_rad(rotation)
+	if args.has("rotation"):
+		sprite.rotation = deg_to_rad(args.get("rotation", 0.0))
 
 	var scale: Dictionary = args.get("scale", {})
 	if scale.has("x") or scale.has("y"):
@@ -203,11 +202,6 @@ func setup_camera_2d(args: Dictionary) -> Dictionary:
 	var camera := Camera2D.new()
 	camera.name = node_name
 
-	if target_path != "":
-		var target := _find_node(scene_root, target_path)
-		if target:
-			camera.position = target.position
-
 	if zoom.has("x") or zoom.has("y"):
 		camera.zoom = _parse_value(zoom, TYPE_VECTOR2)
 
@@ -217,7 +211,7 @@ func setup_camera_2d(args: Dictionary) -> Dictionary:
 		camera.limit_right = limits[2]
 		camera.limit_bottom = limits[3]
 
-	if smoothing >= 0:
+	if args.has("smoothing"):
 		camera.position_smoothing_enabled = smoothing > 0
 		camera.position_smoothing_speed = smoothing
 
@@ -276,6 +270,7 @@ func setup_parallax_background(args: Dictionary) -> Dictionary:
 	var project_path: String = args.get("projectPath", "")
 	var scene_path: String = args.get("scenePath", "")
 	var parent_node_path: String = args.get("parentNodePath", ".")
+	var node_name: String = args.get("nodeName", "ParallaxBackground")
 	var layers: Array = args.get("layers", [])
 
 	var scene_res_path := _to_scene_res_path(project_path, scene_path)
@@ -290,7 +285,7 @@ func setup_parallax_background(args: Dictionary) -> Dictionary:
 		return {"ok": false, "error": "Parent node not found: " + parent_node_path}
 
 	var parallax_bg := ParallaxBackground.new()
-	parallax_bg.name = "ParallaxBackground"
+	parallax_bg.name = node_name
 
 	parent.add_child(parallax_bg)
 	if parallax_bg.get_parent() and _editor_plugin:
@@ -326,12 +321,12 @@ func setup_parallax_background(args: Dictionary) -> Dictionary:
 			if sprite.get_parent() and _editor_plugin:
 				sprite.set_owner(_editor_plugin.get_editor_interface().get_edited_scene_root())
 
-		created_layers.push_back(parent_node_path + "/ParallaxBackground/" + layer_name)
+		created_layers.push_back(parent_node_path + "/" + node_name + "/" + layer_name)
 
 	_save_scene(scene_root, scene_res_path)
 	return {
 		"ok": true,
-		"nodePath": parent_node_path + "/ParallaxBackground",
+		"nodePath": parent_node_path + "/" + node_name,
 		"layers": created_layers
 	}
 
@@ -494,7 +489,7 @@ const SPEED := 200.0
 
 var _direction := Vector2.ZERO
 
-func _physics_process(delta: float) -> void:
+func _physics_process(_delta: float) -> void:
 	_direction.x = Input.get_axis("ui_left", "ui_right")
 	_direction.y = Input.get_axis("ui_up", "ui_down")
 	_direction = _direction.normalized()
@@ -506,10 +501,19 @@ func _physics_process(delta: float) -> void:
 	if script_code.is_empty():
 		return null
 
-	var script_obj := GDScript.new()
-	script_obj.source_code = script_code
-	script_obj.reload()
-	return script_obj
+	var script_dir := "res://scripts"
+	if not DirAccess.dir_exists(script_dir):
+		DirAccess.make_dir_recursive_absolute(script_dir)
+
+	var sanitized_name := node_name.replace(" ", "_").replace("/", "_")
+	var script_path := script_dir + "/" + sanitized_name + ".gd"
+
+	var file := FileAccess.open(script_path, FileAccess.WRITE)
+	if file:
+		file.store_string(script_code)
+		file.close()
+
+	return load(script_path) as GDScript
 
 
 func setup_static_body_2d(args: Dictionary) -> Dictionary:
@@ -573,6 +577,7 @@ func add_y_sort_container(args: Dictionary) -> Dictionary:
 
 	var y_sort := Node2D.new()
 	y_sort.name = node_name
+	y_sort.y_sort_enabled = true
 
 	parent.add_child(y_sort)
 	if y_sort.get_parent() and _editor_plugin:
@@ -582,7 +587,7 @@ func add_y_sort_container(args: Dictionary) -> Dictionary:
 	return {
 		"ok": true,
 		"nodePath": parent_node_path + "/" + node_name,
-		"nodeType": "Node2D"
+		"nodeType": "YSort"
 	}
 
 
@@ -591,7 +596,6 @@ func set_node_2d_transform(args: Dictionary) -> Dictionary:
 	var scene_path: String = args.get("scenePath", "")
 	var node_path: String = args.get("nodePath", ".")
 	var position: Dictionary = args.get("position", {})
-	var rotation: float = args.get("rotation", 0.0)
 	var scale: Dictionary = args.get("scale", {})
 
 	var scene_res_path := _to_scene_res_path(project_path, scene_path)
@@ -608,8 +612,8 @@ func set_node_2d_transform(args: Dictionary) -> Dictionary:
 	if position.has("x") or position.has("y"):
 		target_node.position = _parse_value(position, TYPE_VECTOR2)
 
-	if rotation != 0.0:
-		target_node.rotation = deg_to_rad(rotation)
+	if args.has("rotation"):
+		target_node.rotation = deg_to_rad(args.get("rotation", 0.0))
 
 	if scale.has("x") or scale.has("y"):
 		target_node.scale = _parse_value(scale, TYPE_VECTOR2)
@@ -647,7 +651,9 @@ func add_path_2d(args: Dictionary) -> Dictionary:
 	for i in range(points.size()):
 		var point_dict: Dictionary = points[i]
 		var point := _parse_value(point_dict, TYPE_VECTOR2)
-		curve.add_point(point)
+		var in_tangent := _parse_value(point_dict.get("in", {}), TYPE_VECTOR2)
+		var out_tangent := _parse_value(point_dict.get("out", {}), TYPE_VECTOR2)
+		curve.add_point(point, in_tangent, out_tangent)
 	curve.closed = closed
 	path_node.curve = curve
 
