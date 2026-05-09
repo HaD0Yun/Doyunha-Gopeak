@@ -59,6 +59,22 @@ import {
   handleWaitForNode,
   type ToolDeps as RuntimeTestToolDeps,
 } from './tools/runtime_test.js';
+import {
+  findNodeReferences,
+  findSignalConnections,
+  findNodesByType,
+  crossSceneSetProperty,
+  batchSetProperty,
+  getSceneDependencies,
+} from './tools/refactor.js';
+import {
+  findUnusedResources,
+  analyzeSignalFlow,
+  analyzeSceneComplexity,
+  findScriptReferences,
+  detectCircularDependencies,
+  getProjectStatistics,
+} from './tools/code_analysis.js';
 
 const execAsync = promisify(exec);
 
@@ -1787,6 +1803,32 @@ class GodotServer {
           return await handleGetTestReport(request.params.arguments, this.getRuntimeTestDeps());
         case 'get_performance_monitors':
           return await handleGetPerformanceMonitors(request.params.arguments, this.getRuntimeTestDeps());
+        // Phase 3 — refactor tools
+        case 'find_node_references':
+          return await this.handleFindNodeReferences(request.params.arguments);
+        case 'find_signal_connections':
+          return await this.handleFindSignalConnections(request.params.arguments);
+        case 'find_nodes_by_type':
+          return await this.handleFindNodesByType(request.params.arguments);
+        case 'cross_scene_set_property':
+          return await this.handleCrossSceneSetProperty(request.params.arguments);
+        case 'batch_set_property':
+          return await this.handleBatchSetProperty(request.params.arguments);
+        case 'get_scene_dependencies':
+          return await this.handleGetSceneDependencies(request.params.arguments);
+        // Phase 3 — code analysis tools
+        case 'find_unused_resources':
+          return await this.handleFindUnusedResources(request.params.arguments);
+        case 'analyze_signal_flow':
+          return await this.handleAnalyzeSignalFlow(request.params.arguments);
+        case 'analyze_scene_complexity':
+          return await this.handleAnalyzeSceneComplexity(request.params.arguments);
+        case 'find_script_references':
+          return await this.handleFindScriptReferences(request.params.arguments);
+        case 'detect_circular_dependencies':
+          return await this.handleDetectCircularDependencies(request.params.arguments);
+        case 'get_project_statistics':
+          return await this.handleGetProjectStatistics(request.params.arguments);
         case 'lsp_get_diagnostics':
         case 'lsp_get_completions':
         case 'lsp_get_hover':
@@ -7446,6 +7488,148 @@ uniform float dissolve_amount : hint_range(0.0, 1.0) = 0.0;
       params.properties = typeof args.properties === 'string' ? JSON.parse(args.properties) : args.properties;
     }
     return await this.executeOperation('modify_resource', params, projectPath);
+  }
+
+  // ============================================
+  // Phase 3 — Refactor Tool Handlers
+  // ============================================
+
+  private async handleFindNodeReferences(args: any) {
+    const projectPath = args?.projectPath || args?.project_path;
+    if (!projectPath) throw new McpError(ErrorCode.InvalidParams, 'projectPath is required');
+    const nodeName = args?.nodeName || args?.node_name;
+    if (!nodeName) throw new McpError(ErrorCode.InvalidParams, 'nodeName is required');
+    const result = findNodeReferences(projectPath, nodeName, {
+      scenePaths: args?.scenePaths,
+      maxResults: args?.maxResults,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.ok };
+  }
+
+  private async handleFindSignalConnections(args: any) {
+    const projectPath = args?.projectPath || args?.project_path;
+    if (!projectPath) throw new McpError(ErrorCode.InvalidParams, 'projectPath is required');
+    const result = findSignalConnections(projectPath, {
+      signalName: args?.signalName,
+      sourceNode: args?.sourceNode,
+      targetNode: args?.targetNode,
+      scenePath: args?.scenePath,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.ok };
+  }
+
+  private async handleFindNodesByType(args: any) {
+    const projectPath = args?.projectPath || args?.project_path;
+    if (!projectPath) throw new McpError(ErrorCode.InvalidParams, 'projectPath is required');
+    const nodeType = args?.nodeType || args?.node_type;
+    if (!nodeType) throw new McpError(ErrorCode.InvalidParams, 'nodeType is required');
+    const result = findNodesByType(projectPath, nodeType, {
+      scenePath: args?.scenePath,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.ok };
+  }
+
+  private async handleCrossSceneSetProperty(args: any) {
+    const projectPath = args?.projectPath || args?.project_path;
+    if (!projectPath) throw new McpError(ErrorCode.InvalidParams, 'projectPath is required');
+    const nodePath = args?.nodePath || args?.node_path;
+    if (!nodePath) throw new McpError(ErrorCode.InvalidParams, 'nodePath is required');
+    const propertyName = args?.propertyName || args?.property_name;
+    if (!propertyName) throw new McpError(ErrorCode.InvalidParams, 'propertyName is required');
+    const propertyValue = args?.propertyValue || args?.property_value;
+    if (propertyValue === undefined) throw new McpError(ErrorCode.InvalidParams, 'propertyValue is required');
+    let parsedValue: unknown = propertyValue;
+    if (typeof propertyValue === 'string') {
+      try { parsedValue = JSON.parse(propertyValue); } catch { parsedValue = propertyValue; }
+    }
+    const result = crossSceneSetProperty(projectPath, nodePath, propertyName, parsedValue, {
+      scenePaths: args?.scenePaths,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.ok };
+  }
+
+  private async handleBatchSetProperty(args: any) {
+    const projectPath = args?.projectPath || args?.project_path;
+    if (!projectPath) throw new McpError(ErrorCode.InvalidParams, 'projectPath is required');
+    const nodePath = args?.nodePath || args?.node_path;
+    if (!nodePath) throw new McpError(ErrorCode.InvalidParams, 'nodePath is required');
+    const properties = args?.properties;
+    if (!properties) throw new McpError(ErrorCode.InvalidParams, 'properties is required');
+    const parsedProps = typeof properties === 'string' ? JSON.parse(properties) : properties;
+    const result = batchSetProperty(projectPath, nodePath, parsedProps, {
+      scenePaths: args?.scenePaths,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.ok };
+  }
+
+  private async handleGetSceneDependencies(args: any) {
+    const projectPath = args?.projectPath || args?.project_path;
+    if (!projectPath) throw new McpError(ErrorCode.InvalidParams, 'projectPath is required');
+    const result = getSceneDependencies(projectPath, {
+      scenePath: args?.scenePath,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.ok };
+  }
+
+  // ============================================
+  // Phase 3 — Code Analysis Tool Handlers
+  // ============================================
+
+  private async handleFindUnusedResources(args: any) {
+    const projectPath = args?.projectPath || args?.project_path;
+    if (!projectPath) throw new McpError(ErrorCode.InvalidParams, 'projectPath is required');
+    const result = findUnusedResources(projectPath, {
+      resourceTypes: args?.resourceTypes,
+      checkScenes: args?.checkScenes,
+      checkScripts: args?.checkScripts,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.ok };
+  }
+
+  private async handleAnalyzeSignalFlow(args: any) {
+    const projectPath = args?.projectPath || args?.project_path;
+    if (!projectPath) throw new McpError(ErrorCode.InvalidParams, 'projectPath is required');
+    const result = analyzeSignalFlow(projectPath, {
+      scenePath: args?.scenePath,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.ok };
+  }
+
+  private async handleAnalyzeSceneComplexity(args: any) {
+    const projectPath = args?.projectPath || args?.project_path;
+    if (!projectPath) throw new McpError(ErrorCode.InvalidParams, 'projectPath is required');
+    const result = analyzeSceneComplexity(projectPath, {
+      scenePath: args?.scenePath,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.ok };
+  }
+
+  private async handleFindScriptReferences(args: any) {
+    const projectPath = args?.projectPath || args?.project_path;
+    if (!projectPath) throw new McpError(ErrorCode.InvalidParams, 'projectPath is required');
+    const scriptPath = args?.scriptPath || args?.script_path;
+    if (!scriptPath) throw new McpError(ErrorCode.InvalidParams, 'scriptPath is required');
+    const result = findScriptReferences(projectPath, scriptPath, {
+      includeInherited: args?.includeInherited,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.ok };
+  }
+
+  private async handleDetectCircularDependencies(args: any) {
+    const projectPath = args?.projectPath || args?.project_path;
+    if (!projectPath) throw new McpError(ErrorCode.InvalidParams, 'projectPath is required');
+    const result = detectCircularDependencies(projectPath, {
+      checkScripts: args?.checkScripts,
+      checkScenes: args?.checkScenes,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.ok };
+  }
+
+  private async handleGetProjectStatistics(args: any) {
+    const projectPath = args?.projectPath || args?.project_path;
+    if (!projectPath) throw new McpError(ErrorCode.InvalidParams, 'projectPath is required');
+    const result = getProjectStatistics(projectPath);
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.ok };
   }
 
   private async handleMapProject(args: any) {

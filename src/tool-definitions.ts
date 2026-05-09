@@ -3079,6 +3079,166 @@ export function buildToolDefinitions(godotBridgePort: number): MCPToolDefinition
             required: ['projectPath'],
           },
         },
+        // Phase 3 — Refactor tools
+        {
+          name: 'find_node_references',
+          description: 'Find all scenes that contain a node with a given name. Scans all .tscn files in the project. Useful for refactoring node names across the project.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              nodeName: { type: 'string', description: 'Exact node name to search for (e.g., "Player" or "Enemy/Sprite").' },
+              scenePaths: { type: 'array', items: { type: 'string' }, description: 'Optional list of scene paths to limit the search.' },
+              maxResults: { type: 'number', description: 'Maximum number of results. Default: 500.' },
+            },
+            required: ['projectPath', 'nodeName'],
+          },
+        },
+        {
+          name: 'find_signal_connections',
+          description: 'List all signal connections in scenes matching the given filter. Useful for understanding event flow across scenes.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              signalName: { type: 'string', description: 'Filter by signal name (e.g., "pressed", "body_entered").' },
+              sourceNode: { type: 'string', description: 'Filter by source node name.' },
+              targetNode: { type: 'string', description: 'Filter by target node name.' },
+              scenePath: { type: 'string', description: 'Limit to a specific scene path.' },
+            },
+            required: ['projectPath'],
+          },
+        },
+        {
+          name: 'find_nodes_by_type',
+          description: 'Find all nodes of a given type across all scenes. Useful for finding all CharacterBody2Ds, Sprites, etc.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              nodeType: { type: 'string', description: 'Node type to search for (e.g., "CharacterBody2D", "Sprite2D", "RigidBody3D").' },
+              scenePath: { type: 'string', description: 'Limit to a specific scene path.' },
+            },
+            required: ['projectPath', 'nodeType'],
+          },
+        },
+        {
+          name: 'cross_scene_set_property',
+          description: 'Set a property on nodes with a given name across multiple scenes. Scans all scenes matching the pattern and updates matching nodes.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              nodePath: { type: 'string', description: 'Node name or path to match (e.g., "Player" or "Enemy/Sprite").' },
+              propertyName: { type: 'string', description: 'Name of the property to set.' },
+              propertyValue: { type: 'string', description: 'JSON value to set.' },
+              scenePaths: { type: 'array', items: { type: 'string' }, description: 'Optional list of scene paths to limit the update.' },
+            },
+            required: ['projectPath', 'nodePath', 'propertyName', 'propertyValue'],
+          },
+        },
+        {
+          name: 'batch_set_property',
+          description: 'Set multiple properties on nodes with a given name across multiple scenes in one call.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              nodePath: { type: 'string', description: 'Node name or path to match.' },
+              properties: { type: 'string', description: 'JSON object of properties to set.' },
+              scenePaths: { type: 'array', items: { type: 'string' }, description: 'Optional list of scene paths to limit the update.' },
+            },
+            required: ['projectPath', 'nodePath', 'properties'],
+          },
+        },
+        {
+          name: 'get_scene_dependencies',
+          description: 'Get all external resource, scene, and script dependencies for scenes in the project.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Limit analysis to a specific scene path.' },
+            },
+            required: ['projectPath'],
+          },
+        },
+        // Phase 3 — Code analysis tools
+        {
+          name: 'find_unused_resources',
+          description: 'Find resource files (.tres) that have no references in any scene or script. Useful for cleaning up unused assets.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              resourceTypes: { type: 'array', items: { type: 'string' }, description: 'Filter by resource file extension (e.g., ["tres"]).' },
+              checkScenes: { type: 'boolean', description: 'Check scene files for references. Default: true.' },
+              checkScripts: { type: 'boolean', description: 'Check script files for references. Default: true.' },
+            },
+            required: ['projectPath'],
+          },
+        },
+        {
+          name: 'analyze_signal_flow',
+          description: 'Build a graph of signal emission and reception across all scenes. Shows how nodes communicate through signals.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Limit analysis to a specific scene path.' },
+            },
+            required: ['projectPath'],
+          },
+        },
+        {
+          name: 'analyze_scene_complexity',
+          description: 'Calculate complexity scores for all scenes based on node count, depth, resource count, script count, and connection count.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scenePath: { type: 'string', description: 'Limit analysis to a specific scene path.' },
+            },
+            required: ['projectPath'],
+          },
+        },
+        {
+          name: 'find_script_references',
+          description: 'Find all files that reference a given script (via extends, preload, load, new, or signal connect).',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              scriptPath: { type: 'string', description: 'Path to the script (res:// path or relative).' },
+              includeInherited: { type: 'boolean', description: 'Include inherited references. Default: false.' },
+            },
+            required: ['projectPath', 'scriptPath'],
+          },
+        },
+        {
+          name: 'detect_circular_dependencies',
+          description: 'Detect circular extends/preload chains between GDScript files. Returns all cycles found in the project.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+              checkScripts: { type: 'boolean', description: 'Check GDScript files. Default: true.' },
+              checkScenes: { type: 'boolean', description: 'Check scene files. Default: false.' },
+            },
+            required: ['projectPath'],
+          },
+        },
+        {
+          name: 'get_project_statistics',
+          description: 'Return aggregate statistics about the project: scene/script/resource counts, line counts, node type breakdown, complexity distribution.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
+            },
+            required: ['projectPath'],
+          },
+        },
         // Godot LSP Tools (GDScript diagnostics via Godot editor LSP on port 6005)
         ...createLSPTools(),
         // Godot DAP Tools (Debug Adapter Protocol via Godot editor DAP on port 6006)
