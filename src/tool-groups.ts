@@ -180,6 +180,38 @@ export const TOOL_GROUPS: Record<string, ToolGroupDefinition> = {
     tools: ['validate_patch_with_lsp', 'enforce_version_gate'],
     keywords: ['version gate', 'validate patch', 'version constraint', 'version check'],
   },
+  refactor: {
+    description: 'Cross-scene refactor: find references, connections, node types, set properties across scenes, scene dependencies',
+    tools: [
+      'find_node_references',
+      'find_signal_connections',
+      'find_nodes_by_type',
+      'cross_scene_set_property',
+      'batch_set_property',
+      'get_scene_dependencies',
+    ],
+    keywords: [
+      'find node', 'node references', 'signal connections', 'find nodes by type',
+      'cross scene', 'batch set property', 'scene dependencies',
+      'refactor', 'rename node', 'find signal', 'find connection',
+    ],
+  },
+  code_analysis: {
+    description: 'Code analysis: find unused resources, signal flow, scene complexity, script references, circular deps, project stats',
+    tools: [
+      'find_unused_resources',
+      'analyze_signal_flow',
+      'analyze_scene_complexity',
+      'find_script_references',
+      'detect_circular_dependencies',
+      'get_project_statistics',
+    ],
+    keywords: [
+      'unused resources', 'find unused', 'signal flow', 'analyze complexity',
+      'script references', 'find references', 'circular dependency', 'detect cycle',
+      'project statistics', 'code analysis', 'static analysis',
+    ],
+  },
 };
 
 export const CORE_TOOL_GROUPS: Record<string, ToolGroupDefinition> = {
