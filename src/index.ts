@@ -7555,7 +7555,12 @@ uniform float dissolve_amount : hint_range(0.0, 1.0) = 0.0;
     if (!nodePath) throw new McpError(ErrorCode.InvalidParams, 'nodePath is required');
     const properties = args?.properties;
     if (!properties) throw new McpError(ErrorCode.InvalidParams, 'properties is required');
-    const parsedProps = typeof properties === 'string' ? JSON.parse(properties) : properties;
+    let parsedProps: Record<string, unknown>;
+    try {
+      parsedProps = typeof properties === 'string' ? JSON.parse(properties) : properties;
+    } catch {
+      throw new McpError(ErrorCode.InvalidParams, 'properties must be a valid JSON object');
+    }
     const result = batchSetProperty(projectPath, nodePath, parsedProps, {
       scenePaths: args?.scenePaths,
     });

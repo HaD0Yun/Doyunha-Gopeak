@@ -3145,7 +3145,7 @@ export function buildToolDefinitions(godotBridgePort: number): MCPToolDefinition
             properties: {
               projectPath: { type: 'string', description: 'Absolute path to project directory containing project.godot.' },
               nodePath: { type: 'string', description: 'Node name or path to match.' },
-              properties: { type: 'string', description: 'JSON object of properties to set.' },
+              properties: { type: 'object', additionalProperties: true, description: 'Object of properties to set (e.g., {"position": [0, 0], "modulate": Color(1,1,1,1)}). Accepts both object and JSON string for backward compatibility.' },
               scenePaths: { type: 'array', items: { type: 'string' }, description: 'Optional list of scene paths to limit the update.' },
             },
             required: ['projectPath', 'nodePath', 'properties'],

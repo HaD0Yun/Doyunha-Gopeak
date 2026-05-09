@@ -1,49 +1,6 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative as relativePath } from 'node:path';
-
-// ─── File collectors ─────────────────────────────────────────────────
-
-function collectFiles(
-  projectPath: string,
-  dir: string,
-  extensions: string[],
-  filter?: (relPath: string) => boolean
-): string[] {
-  const results: string[] = [];
-
-  function scan(d: string): void {
-    let entries: string[];
-    try {
-      entries = readdirSync(d);
-    } catch {
-      return;
-    }
-
-    for (const name of entries) {
-      if (name.startsWith('.')) continue;
-      const fullPath = join(d, name);
-      let st: ReturnType<typeof statSync>;
-      try {
-        st = statSync(fullPath);
-      } catch {
-        continue;
-      }
-
-      if (st.isDirectory()) {
-        if (name === 'addons' || name === '.godot' || name === '.gopeak') continue;
-        scan(fullPath);
-      } else if (extensions.some(ext => name.endsWith('.' + ext))) {
-        const relPath = 'res://' + relativePath(projectPath, fullPath).replace(/\\/g, '/');
-        if (!filter || filter(relPath)) {
-          results.push(fullPath);
-        }
-      }
-    }
-  }
-
-  scan(dir);
-  return results;
-}
+import { readFileSync } from 'node:fs';
+import { relative as relativePath } from 'node:path';
+import { collectFiles } from './fs_utils';
 
 // ─── find_unused_resources ──────────────────────────────────────────
 
@@ -166,7 +123,7 @@ export function analyzeSignalFlow(
 
     for (const line of lines) {
       const trimmed = line.trim();
-      const connMatch = trimmed.match(/\[connection.*?signal="([^"]+)".*?target="([^"]+)".*?method="([^"]+)"/);
+      const connMatch = trimmed.match(/\[connection.*?signal="([^"]+)".*?to="([^"]+)".*?method="([^"]+)"/);
       if (connMatch) {
         const signal = connMatch[1];
         const target = connMatch[2];
@@ -178,8 +135,9 @@ export function analyzeSignalFlow(
         const targetNode = nodes.get(target)!;
         targetNode.connections++;
 
+        const fromMatch = trimmed.match(/from="([^"]+)"/);
         edges.push({
-          from: 'Unknown',
+          from: fromMatch ? fromMatch[1] : 'Unknown',
           to: target,
           signal,
           method: connMatch[3],
@@ -239,23 +197,25 @@ export function analyzeSceneComplexity(
     const lines = content.split('\n');
 
     let nodeCount = 0;
-    let depth = 0;
     let maxDepth = 0;
     let resourceCount = 0;
     let scriptCount = 0;
     let connectionCount = 0;
-
-    let currentIndent = 0;
 
     for (const line of lines) {
       const trimmed = line.trim();
 
       if (trimmed.startsWith('[node')) {
         nodeCount++;
-        const nameMatch = trimmed.match(/name="([^"]+)"/);
         const typeMatch = trimmed.match(/type="([^"]+)"/);
         if (typeMatch && (typeMatch[1] === 'GDScript' || typeMatch[1].toLowerCase().includes('script'))) {
           scriptCount++;
+        }
+
+        const parentMatch = trimmed.match(/parent="([^"]+)"/);
+        if (parentMatch) {
+          const depth = parentMatch[1].split('/').filter(p => p).length;
+          maxDepth = Math.max(maxDepth, depth);
         }
       } else if (trimmed.startsWith('[ext_resource')) {
         resourceCount++;
@@ -263,19 +223,6 @@ export function analyzeSceneComplexity(
         resourceCount++;
       } else if (trimmed.startsWith('[connection')) {
         connectionCount++;
-        const signalMatch = trimmed.match(/signal="([^"]+)"/);
-      }
-
-      const spaceMatch = line.match(/^(\s*)/);
-      if (spaceMatch) {
-        const indent = spaceMatch[1].length;
-        if (trimmed.startsWith('[') && trimmed.includes('name=')) {
-          if (indent > currentIndent) maxDepth = Math.max(maxDepth, depth);
-          currentIndent = indent;
-          depth++;
-        } else if (trimmed.startsWith('[') && !trimmed.includes('name=')) {
-          depth = Math.max(0, depth - 1);
-        }
       }
     }
 
@@ -345,18 +292,21 @@ export function findScriptReferences(
 
     const fileRel = 'res://' + relativePath(projectPath, f).replace(/\\/g, '/');
     const lines = content.split('\n');
+    const seenLines = new Set<number>();
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
-      if (line.includes(scriptRel) || line.includes(scriptName)) {
+      if (line.includes(scriptRel) || line.includes(scriptName + '.gd"') || line.includes(scriptName + '.gd(')) {
+        if (seenLines.has(i)) continue;
+        seenLines.add(i);
         let type: ScriptReference['type'] = 'load';
         const trimmed = line.trim();
 
-        if (trimmed.startsWith('extends') && trimmed.includes(scriptName)) type = 'extends';
+        if (trimmed.startsWith('extends') && trimmed.includes(scriptName + '.gd"')) type = 'extends';
         else if (trimmed.includes('preload') && trimmed.includes(scriptRel)) type = 'preload';
-        else if (trimmed.includes('.new()') && trimmed.includes(scriptName)) type = 'new_instance';
-        else if (line.includes('connect') && line.includes(scriptName)) type = 'signal_connect';
+        else if (trimmed.includes('.new()') && (trimmed.includes(scriptName + '.gd') || line.includes(scriptRel))) type = 'new_instance';
+        else if (line.includes('connect') && line.includes(scriptRel)) type = 'signal_connect';
 
         let context = trimmed;
         if (trimmed.length > 120) context = trimmed.slice(0, 120) + '...';
@@ -364,7 +314,9 @@ export function findScriptReferences(
         references.push({ path: fileRel, type, line: i + 1, context });
       }
 
-      if (line.includes(scriptName + '.') || line.includes(scriptName + '(')) {
+      if ((line.includes(scriptName + '.') || line.includes(scriptName + '(')) && (line.includes(scriptRel) || line.includes(scriptName + '.gd'))) {
+        if (seenLines.has(i)) continue;
+        seenLines.add(i);
         const context = line.trim().length > 120 ? line.trim().slice(0, 120) + '...' : line.trim();
         references.push({ path: fileRel, type: 'type_hint', line: i + 1, context });
       }
@@ -487,6 +439,8 @@ export function getProjectStatistics(projectPath: string): GetProjectStatisticsR
   let largestScenePath = '';
   let largestScriptLines = 0;
   let largestScriptPath = '';
+  let totalSceneNodes = 0;
+  let totalScriptLines = 0;
 
   const nodeTypeCounts: Record<string, number> = {};
   const complexityCount = { simple: 0, moderate: 0, complex: 0 };
@@ -517,6 +471,7 @@ export function getProjectStatistics(projectPath: string): GetProjectStatisticsR
     }
 
     totalLines += lines.length;
+    totalSceneNodes += nodeCount;
 
     if (nodeCount > largestSceneNodes) {
       largestSceneNodes = nodeCount;
@@ -539,6 +494,7 @@ export function getProjectStatistics(projectPath: string): GetProjectStatisticsR
 
     const lines = content.split('\n');
     totalLines += lines.length;
+    totalScriptLines += lines.length;
 
     if (lines.length > largestScriptLines) {
       largestScriptLines = lines.length;
@@ -547,10 +503,10 @@ export function getProjectStatistics(projectPath: string): GetProjectStatisticsR
   }
 
   const avgSceneNodes = sceneFiles.length > 0
-    ? Math.round(largestSceneNodes / sceneFiles.length * 10) / 10
+    ? Math.round(totalSceneNodes / sceneFiles.length * 10) / 10
     : 0;
   const avgScriptLines = scriptFiles.length > 0
-    ? Math.round(largestScriptLines / scriptFiles.length)
+    ? Math.round(totalScriptLines / scriptFiles.length)
     : 0;
 
   const statistics: ProjectStatistics = {
