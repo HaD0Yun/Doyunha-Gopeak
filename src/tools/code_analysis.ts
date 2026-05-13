@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { relative as relativePath } from 'node:path';
-import { collectFiles } from './fs_utils';
+import { collectFiles } from './fs_utils.js';
 
 // ─── find_unused_resources ──────────────────────────────────────────
 

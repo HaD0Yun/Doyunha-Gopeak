@@ -241,9 +241,7 @@ func _cmd_set_property(params: Dictionary) -> Dictionary:
 		return {"type": "error", "message": "Node not found: " + node_path}
 	
 	var old_value = node.get(property)
-	var set_result = node.set(property, _deserialize_value(value))
-	if set_result != OK:
-		return {"type": "error", "message": "Failed to set property '" + property + "' on node at " + node_path}
+	node.set(property, _deserialize_value(value))
 
 	return {
 		"type": "property_set",

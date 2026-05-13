@@ -873,21 +873,26 @@ func set_anchor_preset(args: Dictionary) -> Dictionary:
 		return {"ok": false, "error": "Node is not a Control: " + node_path}
 
 	var preset_map := {
-		"None": Control.PRESET_NONE,
 		"FullRect": Control.PRESET_FULL_RECT,
 		"CenterLeft": Control.PRESET_CENTER_LEFT,
 		"CenterTop": Control.PRESET_CENTER_TOP,
 		"CenterRight": Control.PRESET_CENTER_RIGHT,
 		"CenterBottom": Control.PRESET_CENTER_BOTTOM,
 		"Center": Control.PRESET_CENTER,
-		"LeftTop": Control.PRESET_LEFT_TOP,
-		"LeftCenter": Control.PRESET_LEFT_CENTER,
-		"LeftBottom": Control.PRESET_LEFT_BOTTOM,
-		"RightTop": Control.PRESET_RIGHT_TOP,
-		"RightCenter": Control.PRESET_RIGHT_CENTER,
-		"RightBottom": Control.PRESET_RIGHT_BOTTOM,
-		"TopCenter": Control.PRESET_TOP_CENTER,
-		"BottomCenter": Control.PRESET_BOTTOM_CENTER,
+		"LeftTop": Control.PRESET_TOP_LEFT,
+		"LeftCenter": Control.PRESET_CENTER_LEFT,
+		"LeftBottom": Control.PRESET_BOTTOM_LEFT,
+		"RightTop": Control.PRESET_TOP_RIGHT,
+		"RightCenter": Control.PRESET_CENTER_RIGHT,
+		"RightBottom": Control.PRESET_BOTTOM_RIGHT,
+		"TopCenter": Control.PRESET_CENTER_TOP,
+		"BottomCenter": Control.PRESET_CENTER_BOTTOM,
+		"LeftWide": Control.PRESET_LEFT_WIDE,
+		"TopWide": Control.PRESET_TOP_WIDE,
+		"RightWide": Control.PRESET_RIGHT_WIDE,
+		"BottomWide": Control.PRESET_BOTTOM_WIDE,
+		"VCenterWide": Control.PRESET_VCENTER_WIDE,
+		"HCenterWide": Control.PRESET_HCENTER_WIDE,
 	}
 
 	if not preset_map.has(anchor_preset_name):

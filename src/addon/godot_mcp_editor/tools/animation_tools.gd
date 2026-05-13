@@ -538,7 +538,7 @@ func get_animation_tree_structure(args: Dictionary) -> Dictionary:
 		result["states"] = []
 		var state_names: Array = root.get_node_list()
 		for state_name in state_names:
-			var child := root.get_node(state_name)
+			var child: AnimationNode = root.get_node(state_name)
 			var state_info := {"name": str(state_name), "type": child.get_class()}
 			if child.has_method("get_animation"):
 				state_info["animation"] = str(child.call("get_animation"))
@@ -550,7 +550,7 @@ func get_animation_tree_structure(args: Dictionary) -> Dictionary:
 			AnimationNodeStateMachineTransition.SWITCH_MODE_AT_END: "at_end",
 		}
 		for i in range(root.get_transition_count()):
-			var t := root.get_transition(i)
+			var t: AnimationNodeStateMachineTransition = root.get_transition(i)
 			result["transitions"].append({
 				"from": str(root.get_transition_from(i)),
 				"to": str(root.get_transition_to(i)),
@@ -560,8 +560,8 @@ func get_animation_tree_structure(args: Dictionary) -> Dictionary:
 		result["blendNodes"] = []
 		var node_names: Array = root.get_node_list()
 		for blend_node_name in node_names:
-			var child := root.get_node(blend_node_name)
-			var pos := root.get_node_position(blend_node_name)
+			var child: AnimationNode = root.get_node(blend_node_name)
+			var pos: Vector2 = root.get_node_position(blend_node_name)
 			result["blendNodes"].append({
 				"name": str(blend_node_name),
 				"type": child.get_class(),
@@ -772,7 +772,7 @@ func remove_state_machine_transition(args: Dictionary) -> Dictionary:
 	var removed := false
 	for i in range(sm.get_transition_count() - 1, -1, -1):
 		if sm.get_transition_from(i) == StringName(from_state) and sm.get_transition_to(i) == StringName(to_state):
-			sm.remove_transition(i)
+			sm.remove_transition(StringName(from_state), StringName(to_state))
 			removed = true
 			break
 
@@ -836,13 +836,11 @@ func set_blend_tree_node(args: Dictionary) -> Dictionary:
 	var new_node: AnimationNode = null
 	match node_type:
 		"Animation": new_node = AnimationNodeAnimation.new()
-		"Blend1": new_node = AnimationNodeBlend1.new()
 		"Blend2": new_node = AnimationNodeBlend2.new()
 		"Blend3": new_node = AnimationNodeBlend3.new()
-		"Blend4": new_node = AnimationNodeBlend4.new()
 		"BlendSpace1D": new_node = AnimationNodeBlendSpace1D.new()
 		"BlendSpace2D": new_node = AnimationNodeBlendSpace2D.new()
-		"ClipOneShot": new_node = AnimationNodeClipOneShot.new()
+		"OneShot", "ClipOneShot": new_node = AnimationNodeOneShot.new()
 		"StateMachine": new_node = AnimationNodeStateMachine.new()
 		"TimeSeek": new_node = AnimationNodeTimeSeek.new()
 		"TimeScale": new_node = AnimationNodeTimeScale.new()

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, relative as relativePath, dirname, basename } from 'node:path';
-import { collectFiles } from './fs_utils';
+import { collectFiles } from './fs_utils.js';
 
 // ─── find_node_references ───────────────────────────────────────────
 

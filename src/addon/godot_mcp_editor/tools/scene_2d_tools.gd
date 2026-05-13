@@ -389,7 +389,7 @@ func _create_collision_shape(shape_type: String, size: Dictionary, shape_name: S
 	var shape_node := CollisionShape2D.new()
 	shape_node.name = shape_name
 
-	var vec_size := _parse_value(size, TYPE_VECTOR2)
+	var vec_size: Vector2 = _parse_value(size, TYPE_VECTOR2)
 
 	match shape_type:
 		"rectangle":
@@ -511,7 +511,7 @@ func _physics_process(_delta: float) -> void:
 		return null
 
 	var script_dir := "res://scripts"
-	if not DirAccess.dir_exists(script_dir):
+	if not DirAccess.dir_exists_absolute(script_dir):
 		DirAccess.make_dir_recursive_absolute(script_dir)
 
 	var sanitized_name := node_name.replace(" ", "_").replace("/", "_")
@@ -659,9 +659,9 @@ func add_path_2d(args: Dictionary) -> Dictionary:
 	var curve := Curve2D.new()
 	for i in range(points.size()):
 		var point_dict: Dictionary = points[i]
-		var point := _parse_value(point_dict, TYPE_VECTOR2)
-		var in_tangent := _parse_value(point_dict.get("in", {}), TYPE_VECTOR2)
-		var out_tangent := _parse_value(point_dict.get("out", {}), TYPE_VECTOR2)
+		var point: Vector2 = _parse_value(point_dict, TYPE_VECTOR2)
+		var in_tangent: Vector2 = _parse_value(point_dict.get("in", {}), TYPE_VECTOR2)
+		var out_tangent: Vector2 = _parse_value(point_dict.get("out", {}), TYPE_VECTOR2)
 		curve.add_point(point, in_tangent, out_tangent)
 	curve.closed = closed
 	path_node.curve = curve

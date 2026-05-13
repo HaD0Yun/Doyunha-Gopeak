@@ -400,18 +400,13 @@ func create_particles(args: Dictionary) -> Dictionary:
 	# Draw pass - create a default box mesh for 3D particles
 	if not draw_pass_path.is_empty():
 		var loaded = load(_ensure_res_path(draw_pass_path))
-		if loaded is Mesh or loaded is ParticleDrawPass:
-			if is_3d:
-				(particles as GPUParticles3D).draw_pass_1 = loaded
-			else:
-				(particles as GPUParticles2D).texture = loaded
+		if is_3d and loaded is Mesh:
+			(particles as GPUParticles3D).draw_pass_1 = loaded
+		elif not is_3d and loaded is Texture2D:
+			(particles as GPUParticles2D).texture = loaded
 		else:
-			# For 2D, try as Texture2D
-			if not is_3d and loaded is Texture2D:
-				(particles as GPUParticles2D).texture = loaded as Texture2D
-			else:
-				root.queue_free()
-				return {"ok": false, "error": "drawPassPath did not load a valid mesh or texture: " + draw_pass_path}
+			root.queue_free()
+			return {"ok": false, "error": "drawPassPath did not load a valid mesh or texture: " + draw_pass_path}
 
 	parent.add_child(particles)
 	_set_owner_recursive(particles, root)
@@ -454,7 +449,7 @@ func set_particle_material(args: Dictionary) -> Dictionary:
 	var proc_mat: ParticleProcessMaterial
 
 	# Get existing material from target node if available
-	var existing_mat = target.get("process_material", null)
+	var existing_mat = target.get("process_material")
 	var target_is_cpu := target is CPUParticles3D or target is CPUParticles2D
 
 	# Build or load material - prefer duplicating existing when no explicit path provided
@@ -878,8 +873,8 @@ func apply_particle_preset(args: Dictionary) -> Dictionary:
 	if not preset_configs.has(preset):
 		return {"ok": false, "error": "Unknown preset: " + preset + ". Available: " + ", ".join(preset_configs.keys())}
 
-	var config := preset_configs[preset]
-	var is_2d := config["particleType"].ends_with("2D")
+	var config: Dictionary = preset_configs[preset]
+	var is_2d: bool = String(config["particleType"]).ends_with("2D")
 
 	# Build arguments for create_particles
 	var create_args := {
@@ -962,21 +957,21 @@ func get_particle_info(args: Dictionary) -> Dictionary:
 		"nodeName": target.name,
 		"nodeType": target.get_class(),
 		"is3D": is_particles_3d,
-		"amount": target.get("amount", null),
-		"lifetime": target.get("lifetime", null),
-		"emitting": target.get("emitting", null),
-		"oneShot": target.get("one_shot", null),
-		"speedScale": target.get("speed_scale", null),
+		"amount": target.get("amount"),
+		"lifetime": target.get("lifetime"),
+		"emitting": target.get("emitting"),
+		"oneShot": target.get("one_shot"),
+		"speedScale": target.get("speed_scale"),
 	}
 
 	# Get process material info
-	var proc_mat = target.get("process_material", null)
+	var proc_mat = target.get("process_material")
 	if proc_mat:
 		info["processMaterial"] = {
 			"hasMaterial": true,
 		}
 
-		# Common properties - use 'in' operator instead of .has()
+		# Common properties
 		if "direction" in proc_mat:
 			info["processMaterial"]["direction"] = _serialize_value(proc_mat.get("direction"))
 		if "spread" in proc_mat:
@@ -1002,7 +997,7 @@ func get_particle_info(args: Dictionary) -> Dictionary:
 
 	# Get texture/draw pass info for 2D
 	if not is_particles_3d:
-		var texture = target.get("texture", null)
+		var texture = target.get("texture")
 		if texture:
 			info["texture"] = {"hasTexture": true}
 		else:
@@ -1010,7 +1005,7 @@ func get_particle_info(args: Dictionary) -> Dictionary:
 
 	# Get draw pass info for 3D
 	if is_particles_3d:
-		var draw_pass = target.get("draw_pass_1", null)
+		var draw_pass = target.get("draw_pass_1")
 		if draw_pass:
 			info["drawPass"] = {"hasPass": true}
 		else:
