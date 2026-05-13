@@ -54,7 +54,7 @@
   },
   "overrides": {
     "@hono/node-server": "^1.19.11",
-    "hono": "4.12.7",
+    "hono": "^4.12.18",
     "path-to-regexp": "8.4.1"
   },
   "license": "MIT",
