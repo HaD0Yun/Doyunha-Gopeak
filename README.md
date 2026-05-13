@@ -68,7 +68,7 @@ gopeak setup
 }
 ```
 
-> `GOPEAK_TOOL_PROFILE=compact` is the default. It exposes 33 core tools with 22 dynamic tool groups (78 additional tools) that activate on demand — keeping token usage low while preserving full capability.
+> `GOPEAK_TOOL_PROFILE=compact` is the default. It exposes a trusted core surface with dynamic tool groups that activate on demand — keeping token usage low while making experimental or environment-dependent capabilities explicit.
 
 ### 3) First prompts to try
 
@@ -81,10 +81,10 @@ gopeak setup
 ## Why GoPeak
 
 - **Real project feedback loop**: run the game, inspect logs, and fix in-context.
-- **110+ tools available** across scene/script/resource/runtime/LSP/DAP/input/assets.
-- **Token-efficient by default**: compact tool surface (33 tools) + dynamic tool groups. Only activate what you need — no more 110-tool context bombs.
-- **Dynamic tool groups**: search with `tool.catalog` and matching groups auto-activate. Or manually activate with `tool.groups`.
-- **Deep Godot integration**: ClassDB queries, runtime inspection, debugger hooks, bridge-based scene/resource edits.
+- **Trusted Godot 4 workflow tools** across project discovery, scene/script/resource editing, runtime/LSP/DAP integrations, testing, and asset workflows.
+- **Token-efficient by default**: compact core surface + dynamic tool groups. Activate only the capability family you need instead of loading the full legacy surface.
+- **Dynamic tool groups with explicit maturity labels**: search with `tool.catalog` and matching groups auto-activate, or manually activate with `tool.groups`.
+- **Deep Godot integration with setup gates**: ClassDB queries, runtime inspection, debugger hooks, and bridge-based scene/resource edits clearly state addon, editor, LSP, DAP, or runtime requirements.
 
 ### Best For
 
@@ -98,9 +98,9 @@ gopeak setup
 
 GoPeak supports three exposure profiles:
 
-- `compact` (default): 33 core tools + **22 dynamic tool groups** (78 additional tools activated on demand)
-- `full`: exposes full legacy tool list (110+)
-- `legacy`: same exposed behavior as `full`
+- `compact` (default): trusted core tools plus dynamic tool groups activated on demand.
+- `full`: exposes the full legacy tool list for compatibility and audit work.
+- `legacy`: same exposed behavior as `full` for older configurations.
 
 Configure with either:
 
@@ -109,32 +109,32 @@ Configure with either:
 
 ### Dynamic Tool Groups (compact mode)
 
-In `compact` mode, 78 additional tools are organized into **22 groups** that activate automatically when needed:
+In `compact` mode, additional tools are organized into dynamic groups that activate automatically when needed. Maturity labels are intentionally conservative until each group has Godot 4 fixture evidence:
 
-| Group | Tools | Description |
+| Group | Maturity | Description / setup gate |
 |---|---|---|
-| `scene_advanced` | 3 | Duplicate, reparent nodes, load sprites |
-| `uid` | 2 | UID management for resources |
-| `import_export` | 5 | Import pipeline, reimport, validate project |
-| `autoload` | 4 | Autoload singletons, main scene |
-| `signal` | 2 | Disconnect signals, list connections |
-| `runtime` | 4 | Live scene inspection, runtime properties, metrics |
-| `resource` | 4 | Create/modify materials, shaders, resources |
-| `animation` | 5 | Animations, tracks, animation tree, state machine |
-| `plugin` | 3 | Enable/disable/list editor plugins |
-| `input` | 1 | Input action mapping |
-| `tilemap` | 2 | TileSet and TileMap cell painting |
-| `audio` | 4 | Audio buses, effects, volume |
-| `navigation` | 2 | Navigation regions and agents |
-| `theme_ui` | 3 | Theme colors, font sizes, shaders |
-| `asset_store` | 3 | Search/download CC0 assets |
-| `testing` | 6 | Screenshots, viewport capture, input injection |
-| `dx_tools` | 4 | Error log, project health, find usages, scaffold |
-| `intent_tracking` | 9 | Intent capture, decision logs, handoff briefs |
-| `class_advanced` | 1 | Class inheritance inspection |
-| `lsp` | 3 | GDScript completions, hover, symbols |
-| `dap` | 6 | Breakpoints, stepping, stack traces |
-| `version_gate` | 2 | Version validation, patch verification |
+| `scene_advanced` | audit-required | Duplicate, reparent nodes, load sprites; verify scene ownership/persistence in a Godot 4 fixture before treating as trusted. |
+| `uid` | audit-required | UID management for resources; gate behavior by Godot version and resource save/load evidence. |
+| `import_export` | audit-required | Import pipeline, reimport, validate project; requires fixture checks for import settings and export command construction. |
+| `autoload` | audit-required | Autoload singletons, main scene; requires project settings round-trip verification. |
+| `signal` | audit-required | Disconnect signals, list connections; requires signal round-trip verification. |
+| `runtime` | optional-runtime | Live scene inspection, runtime properties, metrics; requires the runtime addon/socket. |
+| `resource` | audit-required | Create/modify materials, shaders, resources; requires resource save/load fixture checks. |
+| `animation` | audit-required | Animations, tracks, animation tree, state machine; requires saved scene/resource fixture checks. |
+| `plugin` | optional-editor | Enable/disable/list editor plugins; requires editor plugin availability. |
+| `input` | audit-required | Input action mapping; requires project settings round-trip verification. |
+| `tilemap` | audit-required | TileSet and TileMap cell painting; must account for Godot 4.3+ `TileMapLayer` behavior before being promoted. |
+| `audio` | audit-required | Audio buses, effects, volume; requires bus layout fixture checks. |
+| `navigation` | audit-required | Navigation regions and agents; requires saved scene/resource fixture checks. |
+| `theme_ui` | audit-required | Theme colors, font sizes, shaders; requires resource save/load fixture checks. |
+| `asset_store` | optional-network | Search/download external CC0 assets; requires network/provider availability and should remain optional. |
+| `testing` | optional-runtime | Screenshots, viewport capture, input injection; requires runtime addon/editor availability. |
+| `dx_tools` | audit-required | Error log, project health, find usages, scaffold; requires deterministic static fixture checks. |
+| `intent_tracking` | workflow-layer | Intent capture, decision logs, handoff briefs; not a Godot engine primitive and should stay opt-in/workflow-scoped. |
+| `class_advanced` | trusted-static | Class inheritance inspection; validate against ClassDB/static evidence. |
+| `lsp` | optional-lsp | GDScript completions, hover, symbols; requires Godot LSP on port 6005. |
+| `dap` | optional-dap | Breakpoints, stepping, stack traces; requires Godot DAP on port 6006. |
+| `version_gate` | audit-required | Version validation and patch verification; requires explicit version fixture evidence. |
 
 **How it works:**
 
@@ -165,7 +165,7 @@ The internal headless serializer uses `_type`, but MCP callers should prefer `ty
 
 ### Don't worry about tokens
 
-GoPeak uses **cursor-based pagination** for `tools/list` — even in `full` profile, tools are delivered in pages (default 33) instead of dumping all 110+ definitions at once. Your AI client fetches the next page only when it needs more.
+GoPeak uses **cursor-based pagination** for `tools/list` — even in `full` profile, tools are delivered in pages (default 33) instead of dumping the entire legacy definition set at once. Your AI client fetches the next page only when it needs more.
 
 Set page size with `GOPEAK_TOOLS_PAGE_SIZE`:
 
@@ -278,15 +278,17 @@ Then enable plugins in **Project Settings → Plugins** (especially `godot_mcp_e
 
 ## Core Capabilities
 
+These capabilities are grouped by workflow value. Optional-runtime/LSP/DAP/network groups require their setup gates before use; audit-required groups should be promoted only after fixture evidence.
+
 - **Project control**: launch editor, run/stop project, capture debug output
 - **Scene editing**: create scenes, add/delete/reparent nodes, edit properties
 - **Script workflows**: create/modify scripts, inspect script structure
 - **Resources**: create/modify resources, materials, shaders, tilesets
 - **Signals/animation**: connect signals, build animations/tracks/state machines
-- **Runtime tools**: inspect live tree, set properties, call methods, metrics
-- **LSP + DAP**: diagnostics/completion/hover + breakpoints/step/stack trace
-- **Input + screenshots**: keyboard/mouse/action injection and viewport capture
-- **Asset library**: search/fetch CC0 assets (Poly Haven, AmbientCG, Kenney)
+- **Runtime tools**: inspect live tree, set properties, call methods, metrics (requires runtime addon/socket)
+- **LSP + DAP**: diagnostics/completion/hover + breakpoints/step/stack trace (requires Godot LSP/DAP ports)
+- **Input + screenshots**: keyboard/mouse/action injection and viewport capture (requires runtime/editor bridge setup)
+- **Asset library**: search/fetch CC0 assets (optional network/provider workflow)
 
 ### Tool families (examples)
 
@@ -330,6 +332,19 @@ Visualize your entire project architecture with `visualizer.map` (`map_project` 
 - "Reset all active tool groups with `tool.groups` to reduce context."
 
 ---
+
+## Migration & Deprecation Policy
+
+GoPeak treats `compact` as the safe default and `full`/`legacy` as compatibility profiles. Any future hide, remove, rename, or API-contract change must include:
+
+1. an old → new mapping or an explicit no-replacement note;
+2. the profile impact (`compact`, `full`, `legacy`, or opt-in group);
+3. whether an alias remains and the planned removal window;
+4. README/docs and release-note updates;
+5. a verification command proving `tools/list` exposure and alias behavior;
+6. a migration prompt example for common Godot workflows.
+
+Current compatibility stance: legacy tool names and compact aliases remain supported. Dynamic groups with optional external requirements (`runtime`, `testing`, `lsp`, `dap`, `asset_store`) should be documented as opt-in/setup-gated rather than marketed as always-available core behavior.
 
 ## Technical Reference
 

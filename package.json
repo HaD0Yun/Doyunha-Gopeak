@@ -2,7 +2,7 @@
   "name": "gopeak",
   "version": "2.3.6-kuiper.1",
   "mcpName": "io.github.HaD0Yun/gopeak",
-  "description": "GoPeak — MCP server for Godot Engine with 110+ tools, compact/dynamic profiles, GDScript LSP, DAP debugger, screenshots, input injection, and CC0 asset search.",
+  "description": "GoPeak — MCP server for trusted Godot 4 workflows with compact/dynamic tool profiles, setup-gated LSP/DAP/runtime integrations, and migration-safe legacy compatibility.",
   "type": "module",
   "main": "./build/index.js",
   "bin": {
@@ -23,7 +23,7 @@
     "test:smoke": "node scripts/smoke-test.mjs",
     "test:integration": "node test-bridge.mjs",
     "test:dynamic-groups": "node test-dynamic-groups.mjs",
-    "test:docs": "node test-readme-localization-consistency.mjs",
+    "test:docs": "node test-readme-localization-consistency.mjs && node test-docs-package-policy.mjs",
     "test:regressions": "node test-regressions.mjs",
     "test:ci": "npm run test:smoke && npm run test:regressions",
     "ci": "npm run build && npm run typecheck && npm run test:ci",
@@ -35,7 +35,8 @@
     "version:bump": "node scripts/bump-version.mjs",
     "test:setup": "npm run build && node test-setup-hooks.mjs && node test-metadata-consistency.mjs && node test-packaging-consistency.mjs",
     "test:metadata": "npm run build && node test-metadata-consistency.mjs",
-    "test:packaging": "npm run build && node test-packaging-consistency.mjs"
+    "test:packaging": "npm run build && node test-packaging-consistency.mjs",
+    "test:docs-policy": "node test-docs-package-policy.mjs"
   },
   "engines": {
     "node": ">=18"
