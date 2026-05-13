@@ -25,7 +25,7 @@ gopeak
 ```
 
 ## Resumo
-- 33 ferramentas principais + 22 grupos dinâmicos ativados sob demanda
+- Ferramentas principais confiáveis + grupos dinâmicos ativados sob demanda
 - Cobre cenas, scripts, recursos, runtime, LSP, DAP e automação de entrada
 - Pensado para fluxos de IA baseados no estado real do projeto Godot
 
