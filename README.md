@@ -3,32 +3,30 @@
 [![](https://badge.mcpx.dev?type=server 'MCP Server')](https://modelcontextprotocol.io/introduction)
 [![Made with Godot](https://img.shields.io/badge/Made%20with-Godot-478CBF?style=flat&logo=godot%20engine&logoColor=white)](https://godotengine.org)
 [![](https://img.shields.io/badge/Node.js-339933?style=flat&logo=nodedotjs&logoColor=white 'Node.js')](https://nodejs.org/en/download/)
-[![](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white 'TypeScript')](https://www.typescriptlang.org/)
 [![npm](https://img.shields.io/npm/v/gopeak?style=flat&logo=npm&logoColor=white 'npm')](https://www.npmjs.com/package/gopeak)
-[![](https://img.shields.io/github/last-commit/HaD0Yun/Gopeak-godot-mcp 'Last Commit')](https://github.com/HaD0Yun/Gopeak-godot-mcp/commits/main)
-[![](https://img.shields.io/github/stars/HaD0Yun/Gopeak-godot-mcp 'Stars')](https://github.com/HaD0Yun/Gopeak-godot-mcp/stargazers)
-[![](https://img.shields.io/github/forks/HaD0Yun/Gopeak-godot-mcp 'Forks')](https://github.com/HaD0Yun/Gopeak-godot-mcp/network/members)
 [![](https://img.shields.io/badge/License-MIT-red.svg 'MIT License')](https://opensource.org/licenses/MIT)
 
 🌐 **Languages**: **English** | [한국어](README-ko.md) | [日本語](README-ja.md) | [Deutsch](README-de.md) | [Português](README-pt_BR.md) | [简体中文](README-zh.md)
 
 ![GoPeak Hero](assets/gopeak-hero-v2.png)
 
-**GoPeak is an MCP server for Godot that lets AI assistants run, inspect, modify, and debug real projects end-to-end.**
+**GoPeak is an MCP server for Godot 4 that gives AI assistants a real edit → run → inspect → fix loop.**
+
+It is designed for trusted Godot 4 workflows: small default tool surface, setup-gated advanced capabilities, and explicit compatibility rules for older/legacy tool names.
 
 > English is the canonical source of truth. Localized READMEs are concise overviews and may lag behind `README.md`.
-
-> Discord community chat is temporarily unavailable while the invite link is refreshed. Please use GitHub Discussions in the meantime: https://github.com/HaD0Yun/Gopeak-godot-mcp/discussions
+>
+> Discord is temporarily unavailable while the invite link is refreshed. Use [GitHub Discussions](https://github.com/HaD0Yun/Gopeak-godot-mcp/discussions) for now.
 
 ---
 
-## Quick Start (3 Minutes)
+## Quick Start
 
 ### Requirements
 
 - Godot 4.x
 - Node.js 18+
-- MCP-compatible client (Claude Desktop, Cursor, Cline, OpenCode, etc.)
+- MCP-compatible client such as Claude Desktop, Cursor, Cline, or OpenCode
 
 ### 1) Run GoPeak
 
@@ -42,14 +40,6 @@ or install globally:
 npm install -g gopeak
 gopeak
 ```
-
-Optional shell hooks for update notifications are now **opt-in**:
-
-```bash
-gopeak setup
-```
-
-> `gopeak setup` only modifies supported bash/zsh rc files when you run it explicitly. `npm install` no longer installs shell hooks automatically.
 
 ### 2) Add MCP client config
 
@@ -68,199 +58,45 @@ gopeak setup
 }
 ```
 
-> `GOPEAK_TOOL_PROFILE=compact` is the default. It exposes a trusted core surface with dynamic tool groups that activate on demand — keeping token usage low while making experimental or environment-dependent capabilities explicit.
+`compact` is the default profile. It keeps the initial MCP context small and exposes additional setup-gated groups only when requested.
 
-### 3) First prompts to try
+### 3) Try these prompts
 
 - "List Godot projects in `/your/projects` and show project info."
-- "Create `scenes/Player.tscn` with `CharacterBody2D` root and add a movement script."
-- "Run project, get debug output, then fix top error."
+- "Create `scenes/Player.tscn` with a `CharacterBody2D` root and a movement script."
+- "Run the project, read the debug output, and fix the top error."
+- "Use `tool.catalog` to find animation tools, then activate the right group."
 
 ---
 
-## Why GoPeak
+## What You Get
 
-- **Real project feedback loop**: run the game, inspect logs, and fix in-context.
-- **Trusted Godot 4 workflow tools** across project discovery, scene/script/resource editing, runtime/LSP/DAP integrations, testing, and asset workflows.
-- **Token-efficient by default**: compact core surface + dynamic tool groups. Activate only the capability family you need instead of loading the full legacy surface.
-- **Dynamic tool groups with explicit maturity labels**: search with `tool.catalog` and matching groups auto-activate, or manually activate with `tool.groups`.
-- **Deep Godot integration with setup gates**: ClassDB queries, runtime inspection, debugger hooks, and bridge-based scene/resource edits clearly state addon, editor, LSP, DAP, or runtime requirements.
+| Workflow | What GoPeak can do |
+|---|---|
+| Project control | Find projects, launch the editor, run/stop the game, collect debug output. |
+| Scene + script editing | Create scenes, add nodes, edit typed properties, create/modify GDScript. |
+| Resource workflows | Work with resources, materials, shaders, imports, and export-related checks. |
+| Debugging | Use logs, Godot LSP diagnostics, DAP breakpoints/stack traces, and runtime inspection when configured. |
+| Runtime testing | Capture screenshots, inspect live trees, inject input, and call runtime methods through the addon. |
+| Tool discovery | Keep the default surface compact, then activate capability groups with `tool.catalog` or `tool.groups`. |
 
-### Best For
+### Setup gates
 
-- Solo/indie developers moving quickly with AI assistance
-- Teams that need AI grounded in actual project/runtime state
-- Debug-heavy workflows (breakpoints, stack traces, live runtime checks)
+Some capabilities require extra Godot-side services. GoPeak labels these instead of pretending everything is always available:
 
----
-
-## Tool Surface Model (Important)
-
-GoPeak supports three exposure profiles:
-
-- `compact` (default): trusted core tools plus dynamic tool groups activated on demand.
-- `full`: exposes the full legacy tool list for compatibility and audit work.
-- `legacy`: same exposed behavior as `full` for older configurations.
-
-Configure with either:
-
-- `GOPEAK_TOOL_PROFILE`
-- `MCP_TOOL_PROFILE` (fallback alias)
-
-### Dynamic Tool Groups (compact mode)
-
-In `compact` mode, additional tools are organized into dynamic groups that activate automatically when needed. Maturity labels are intentionally conservative until each group has Godot 4 fixture evidence:
-
-| Group | Maturity | Description / setup gate |
-|---|---|---|
-| `scene_advanced` | audit-required | Duplicate, reparent nodes, load sprites; verify scene ownership/persistence in a Godot 4 fixture before treating as trusted. |
-| `uid` | audit-required | UID management for resources; gate behavior by Godot version and resource save/load evidence. |
-| `import_export` | audit-required | Import pipeline, reimport, validate project; requires fixture checks for import settings and export command construction. |
-| `autoload` | audit-required | Autoload singletons, main scene; requires project settings round-trip verification. |
-| `signal` | audit-required | Disconnect signals, list connections; requires signal round-trip verification. |
-| `runtime` | optional-runtime | Live scene inspection, runtime properties, metrics; requires the runtime addon/socket. |
-| `resource` | audit-required | Create/modify materials, shaders, resources; requires resource save/load fixture checks. |
-| `animation` | audit-required | Animations, tracks, animation tree, state machine; requires saved scene/resource fixture checks. |
-| `plugin` | optional-editor | Enable/disable/list editor plugins; requires editor plugin availability. |
-| `input` | audit-required | Input action mapping; requires project settings round-trip verification. |
-| `tilemap` | audit-required | TileSet and TileMap cell painting; must account for Godot 4.3+ `TileMapLayer` behavior before being promoted. |
-| `audio` | audit-required | Audio buses, effects, volume; requires bus layout fixture checks. |
-| `navigation` | audit-required | Navigation regions and agents; requires saved scene/resource fixture checks. |
-| `theme_ui` | audit-required | Theme colors, font sizes, shaders; requires resource save/load fixture checks. |
-| `asset_store` | optional-network | Search/download external CC0 assets; requires network/provider availability and should remain optional. |
-| `testing` | optional-runtime | Screenshots, viewport capture, input injection; requires runtime addon/editor availability. |
-| `dx_tools` | audit-required | Error log, project health, find usages, scaffold; requires deterministic static fixture checks. |
-| `intent_tracking` | workflow-layer | Intent capture, decision logs, handoff briefs; not a Godot engine primitive and should stay opt-in/workflow-scoped. |
-| `class_advanced` | trusted-static | Class inheritance inspection; validate against ClassDB/static evidence. |
-| `lsp` | optional-lsp | GDScript completions, hover, symbols; requires Godot LSP on port 6005. |
-| `dap` | optional-dap | Breakpoints, stepping, stack traces; requires Godot DAP on port 6006. |
-| `version_gate` | audit-required | Version validation and patch verification; requires explicit version fixture evidence. |
-
-**How it works:**
-
-1. **Auto-activation via catalog**: Search with `tool.catalog` and matching groups activate automatically.
-   > "Use `tool.catalog` with query `animation` and show relevant tools."
-
-2. **Manual activation**: Directly activate a group with `tool.groups`.
-   > "Use `tool.groups` to activate the `dap` group for debugging."
-
-3. **Deactivation**: Remove groups when done to reduce context.
-   > "Use `tool.groups` to reset all active groups."
-
-The server sends `notifications/tools/list_changed` so MCP clients (Claude Code, Claude Desktop) automatically refresh the tool list.
-If your MCP client caches tools aggressively and does not refresh after activation, reconnect the client or call the newly activated tool directly once to force a fresh `tools/list` round-trip.
-
-### Typed property values for scene tools
-
-Bridge-backed scene tools (`add_node`, `set_node_properties`) now coerce common vector payloads such as `{ "x": 100, "y": 200 }` and `[100, 200]` for typed properties like `position` and `scale`. Tagged values are still the safest cross-tool form:
-
-```json
-{
-  "position": { "type": "Vector2", "x": 100, "y": 200 },
-  "scale": { "type": "Vector2", "x": 2, "y": 2 }
-}
-```
-
-The internal headless serializer uses `_type`, but MCP callers should prefer `type` when they need an explicit cross-tool Godot value tag.
-
-### Don't worry about tokens
-
-GoPeak uses **cursor-based pagination** for `tools/list` — even in `full` profile, tools are delivered in pages (default 33) instead of dumping the entire legacy definition set at once. Your AI client fetches the next page only when it needs more.
-
-Set page size with `GOPEAK_TOOLS_PAGE_SIZE`:
-
-```json
-{
-  "env": {
-    "GOPEAK_TOOLS_PAGE_SIZE": "25"
-  }
-}
-```
+| Capability | Requires |
+|---|---|
+| Editor bridge scene/resource edits | `godot_mcp_editor` plugin enabled in the Godot project. |
+| Runtime inspection, screenshots, input injection | Runtime addon/socket, default port `7777`. |
+| GDScript LSP tools | Godot LSP enabled on port `6005`. |
+| DAP debugging tools | Godot DAP enabled on port `6006`. |
+| Asset store/provider tools | Network access and provider availability. |
 
 ---
 
-## Installation Options
+## Add the Godot Plugins
 
-### A) Recommended: npx
-
-```bash
-npx -y gopeak
-```
-
-### B) Global install
-
-```bash
-npm install -g gopeak
-gopeak
-```
-
-Optional shell hooks for update notifications remain available via:
-
-```bash
-gopeak setup
-```
-
-### C) From source
-
-```bash
-git clone https://github.com/HaD0Yun/Gopeak-godot-mcp.git
-cd godot-mcp
-npm install
-npm run build
-node build/index.js
-```
-
-GoPeak also exposes two CLI bin names:
-
-- `gopeak`
-- `godot-mcp`
-
----
-
-## Documentation
-
-- [Documentation Map](docs/README.md)
-- [Architecture](docs/architecture.md)
-- [Platform Roadmap](docs/platform-roadmap.md)
-- [Unity-MCP Benchmark Plan](docs/unity-mcp-benchmark-plan.md)
-- [Release Process](docs/release-process.md)
-
-## CI
-
-GitHub Actions runs on push/PR and executes:
-
-1. `npm run build`
-2. `npx tsc --noEmit`
-3. `npm run smoke`
-
-Run the same checks locally before opening a PR:
-
-```bash
-npm run ci
-npm run test:dynamic-groups
-npm run test:integration
-```
-
----
-
-## Versioning & Release
-
-Use the built-in bump script to keep `package.json` and `server.json` in sync:
-
-```bash
-node scripts/bump-version.mjs patch
-node scripts/bump-version.mjs minor --dry-run
-```
-
-Full release checklist: [`docs/release-process.md`](docs/release-process.md).
-
----
-
-## Addons (Recommended)
-
-### Auto Reload + Editor Bridge + Runtime Addon installer
-
-Install in your Godot project folder:
+Install from your Godot project folder:
 
 ```bash
 curl -sL https://raw.githubusercontent.com/HaD0Yun/Gopeak-godot-mcp/main/install-addon.sh | bash
@@ -272,139 +108,167 @@ PowerShell:
 iwr https://raw.githubusercontent.com/HaD0Yun/Gopeak-godot-mcp/main/install-addon.ps1 -UseBasicParsing | iex
 ```
 
-Then enable plugins in **Project Settings → Plugins** (especially `godot_mcp_editor` for bridge-backed scene/resource tools).
+Then enable plugins in **Project Settings → Plugins**:
+
+- `godot_mcp_editor` for bridge-backed scene/resource tools
+- `godot_mcp_runtime` for runtime inspection, screenshots, and input workflows
+
+Optional shell hooks for update notifications are opt-in:
+
+```bash
+gopeak setup
+```
+
+`gopeak setup` only modifies supported bash/zsh rc files when you run it explicitly. `npm install` does not install shell hooks automatically.
 
 ---
 
-## Core Capabilities
+## Tool Profiles
 
-These capabilities are grouped by workflow value. Optional-runtime/LSP/DAP/network groups require their setup gates before use; audit-required groups should be promoted only after fixture evidence.
+GoPeak supports three exposure profiles:
 
-- **Project control**: launch editor, run/stop project, capture debug output
-- **Scene editing**: create scenes, add/delete/reparent nodes, edit properties
-- **Script workflows**: create/modify scripts, inspect script structure
-- **Resources**: create/modify resources, materials, shaders, tilesets
-- **Signals/animation**: connect signals, build animations/tracks/state machines
-- **Runtime tools**: inspect live tree, set properties, call methods, metrics (requires runtime addon/socket)
-- **LSP + DAP**: diagnostics/completion/hover + breakpoints/step/stack trace (requires Godot LSP/DAP ports)
-- **Input + screenshots**: keyboard/mouse/action injection and viewport capture (requires runtime/editor bridge setup)
-- **Asset library**: search/fetch CC0 assets (optional network/provider workflow)
-
-### Tool families (examples)
-
-| Area | Examples |
+| Profile | Use when |
 |---|---|
-| Project | `project.list`, `project.info`, `editor.run` |
-| Scene/Node | `scene.create`, `scene.node.add`, `set_node_properties` |
-| Script | `script.create`, `script.modify`, `script.info` |
-| Runtime | `runtime.status`, `inspect_runtime_tree`, `call_runtime_method` |
-| LSP/DAP | `lsp.diagnostics`, `lsp_get_hover`, `dap_set_breakpoint`, `dap.output` |
-| Input/Visual | `inject_key`, `inject_mouse_click`, `capture_screenshot` |
+| `compact` | Default. Trusted core tools plus dynamic groups activated on demand. |
+| `full` | Compatibility/audit mode for the full legacy surface. |
+| `legacy` | Older config alias with the same exposed behavior as `full`. |
+
+Set either `GOPEAK_TOOL_PROFILE` or the fallback alias `MCP_TOOL_PROFILE`.
+
+### Dynamic groups
+
+In compact mode, search with `tool.catalog`; matching groups auto-activate. You can also manage groups directly with `tool.groups`.
+
+Common groups:
+
+| Group | Status | Notes |
+|---|---|---|
+| `runtime` | optional-runtime | Live scene tree, properties, method calls, metrics. Requires runtime addon/socket. |
+| `testing` | optional-runtime | Screenshots, viewport capture, input injection. Requires runtime/editor setup. |
+| `lsp` | optional-lsp | Diagnostics, completion, hover, symbols. Requires Godot LSP on port `6005`. |
+| `dap` | optional-dap | Breakpoints, stepping, stack traces. Requires Godot DAP on port `6006`. |
+| `asset_store` | optional-network | External CC0 asset search/download. Network/provider dependent. |
+| `class_advanced` | trusted-static | ClassDB/inheritance discovery backed by static engine metadata. |
+| `tilemap` | audit-required | Must account for Godot 4.3+ `TileMapLayer` behavior before promotion. |
+| mutation groups | audit-required | Scene/resource/script/settings/signal/autoload/import/audio/navigation/theme/animation groups need fixture evidence before being marketed as fully trusted. |
+| `intent_tracking` | workflow-layer | Workflow memory/handoff helpers, not a Godot engine primitive. Keep opt-in. |
+
+If your MCP client does not refresh after activation, reconnect the client or call the newly activated tool once to force a fresh `tools/list` round-trip.
+
+GoPeak also uses cursor-based pagination for `tools/list` so large profiles are not dumped into context at once. Tune it with `GOPEAK_TOOLS_PAGE_SIZE` when needed.
 
 ---
 
-## Project Visualizer
+## Typed Godot Values
 
-Visualize your entire project architecture with `visualizer.map` (`map_project` legacy). Scripts are grouped by folder structure into color-coded categories.
+Bridge-backed scene tools such as `add_node` and `set_node_properties` accept common vector payloads for typed properties:
 
-![Project Visualizer — AI-generated architecture map](assets/visualizer-category-map.png)
+```json
+{
+  "position": { "type": "Vector2", "x": 100, "y": 200 },
+  "scale": { "type": "Vector2", "x": 2, "y": 2 }
+}
+```
 
----
-
-## Quick Prompt Examples
-
-### Build
-- "Create a Player scene with CharacterBody2D, Sprite2D, CollisionShape2D, and a basic movement script."
-- "Add an enemy spawner scene and wire spawn signals to GameManager."
-
-### Debug
-- "Run the project, collect errors, and fix the top 3 issues automatically."
-- "Set a breakpoint at `scripts/player.gd:42`, continue execution, and show stack trace when hit."
-
-### Runtime testing
-- "Press `ui_accept`, move mouse to (400, 300), click, then capture a screenshot."
-- "Inspect live scene tree and report nodes with missing scripts or invalid references."
-
-### Discovery & dynamic groups
-- "Use `tool.catalog` with query `tilemap` and list the most relevant tools."
-- "Activate the `dap` tool group for breakpoint debugging with `tool.groups`."
-- "Find import pipeline tools with `tool.catalog` query `import` and run the best one for texture settings."
-- "Reset all active tool groups with `tool.groups` to reduce context."
+Plain `{ "x": 100, "y": 200 }` and `[100, 200]` are also coerced for common `Vector2` fields, but tagged values are safest across tools.
 
 ---
 
-## Migration & Deprecation Policy
+## Useful Commands
 
-GoPeak treats `compact` as the safe default and `full`/`legacy` as compatibility profiles. Any future hide, remove, rename, or API-contract change must include:
+```bash
+# run from npm
+npx -y gopeak
 
-1. an old → new mapping or an explicit no-replacement note;
-2. the profile impact (`compact`, `full`, `legacy`, or opt-in group);
-3. whether an alias remains and the planned removal window;
-4. README/docs and release-note updates;
-5. a verification command proving `tools/list` exposure and alias behavior;
-6. a migration prompt example for common Godot workflows.
+# install globally
+npm install -g gopeak
 
-Current compatibility stance: legacy tool names and compact aliases remain supported. Dynamic groups with optional external requirements (`runtime`, `testing`, `lsp`, `dap`, `asset_store`) should be documented as opt-in/setup-gated rather than marketed as always-available core behavior.
+# run from source
+git clone https://github.com/HaD0Yun/Gopeak-godot-mcp.git
+cd Gopeak-godot-mcp
+npm install
+npm run build
+node build/index.js
 
-## Technical Reference
+# local verification
+npm run ci
+npm run test:dynamic-groups
+npm run test:metadata
+npm run test:packaging
+```
 
-### Environment variables
+CLI bin names:
+
+- `gopeak`
+- `godot-mcp`
+
+---
+
+## Environment & Ports
 
 | Name | Purpose | Default |
 |---|---|---|
 | `GOPEAK_TOOL_PROFILE` | Tool exposure profile: `compact`, `full`, `legacy` | `compact` |
 | `MCP_TOOL_PROFILE` | Fallback profile env alias | `compact` |
 | `GODOT_PATH` | Explicit Godot executable path | auto-detect |
-| `GODOT_BRIDGE_PORT` | Bridge/Visualizer HTTP+WS port override (aliases: `MCP_BRIDGE_PORT`, `GOPEAK_BRIDGE_PORT`) | `6505` |
-| `DEBUG` | Enable server debug logs (`true`/`false`) | `false` |
+| `GODOT_BRIDGE_PORT` | Bridge/Visualizer HTTP+WS port override | `6505` |
+| `GOPEAK_BRIDGE_HOST` | Bridge/Visualizer bind host | `127.0.0.1` |
+| `GOPEAK_TOOLS_PAGE_SIZE` | Number of tools per `tools/list` page | `33` |
+| `DEBUG` | Enable server debug logs | `false` |
 | `LOG_MODE` | Recording mode: `lite` or `full` | `lite` |
-| `GOPEAK_TOOLS_PAGE_SIZE` | Number of tools per `tools/list` page (pagination) | `33` |
-| `GOPEAK_BRIDGE_PORT` | Port for unified bridge/visualizer server | `6505` |
-| `GOPEAK_BRIDGE_HOST` | Bind host for bridge/visualizer server | `127.0.0.1` |
-
-### Ports
 
 | Port | Service |
 |---|---|
-| `6505` (default) | Unified Godot Bridge + Visualizer server (+ `/health`, `/mcp`) on loopback by default |
-| `6005` | Godot LSP |
-| `6006` | Godot DAP |
-| `7777` | Runtime addon command socket (only needed for runtime tools) |
-
-### Minimal port profiles
-
-- **Core editing only**: bridge port (`GODOT_BRIDGE_PORT`, default `6505`)
-- **Core + runtime actions (screenshots/input/runtime inspect)**: bridge port + `7777`
-- **Full debugging + diagnostics**: bridge port + `6005` + `6006` + `7777`
+| `6505` | Unified Godot Bridge + Visualizer server on loopback by default. |
+| `6005` | Godot LSP. |
+| `6006` | Godot DAP. |
+| `7777` | Runtime addon command socket. |
 
 ---
 
 ## Troubleshooting
 
-- **Godot not found** → set `GODOT_PATH`
-- **No MCP tools visible** → restart your MCP client
-- **Project path invalid** → confirm `project.godot` exists
-- **Runtime tools not working** → install/enable runtime addon plugin
-- **Need a tool that is not visible** → run `tool.catalog` to search and auto-activate matching groups, or use `tool.groups` to activate a specific group
-- **`get_editor_status` says disconnected while the Godot editor shows connected** → check whether another `gopeak`/MCP server instance already owns bridge port `6505`; the status payload now reports the startup error and suggests stopping duplicate servers
+- **Godot not found** → set `GODOT_PATH`.
+- **No MCP tools visible** → restart your MCP client.
+- **Need a hidden tool** → search with `tool.catalog` or activate a group with `tool.groups`.
+- **Project path invalid** → confirm `project.godot` exists.
+- **Runtime tools not working** → install/enable the runtime addon and check port `7777`.
+- **Editor bridge disconnected** → stop duplicate `gopeak`/MCP servers that may already own bridge port `6505`; `get_editor_status` reports bridge startup errors such as `EADDRINUSE`.
 
 ---
 
-## Docs & Project Links
+## Migration & Deprecation Policy
 
-- [Architecture (MCP Platform Direction)](docs/architecture.md)
-- [Platform Roadmap (P1/P2/P3)](docs/platform-roadmap.md)
+GoPeak treats `compact` as the safe default and `full`/`legacy` as compatibility profiles. Future hide, remove, rename, or API-contract changes must include:
+
+1. old → new mapping or an explicit no-replacement note;
+2. profile impact (`compact`, `full`, `legacy`, or opt-in group);
+3. alias window and planned removal timing;
+4. README/docs and release-note updates;
+5. verification proving `tools/list` exposure and alias behavior;
+6. migration prompt examples for common Godot workflows.
+
+Current stance: legacy tool names and compact aliases remain supported. Optional external groups (`runtime`, `testing`, `lsp`, `dap`, `asset_store`) are setup-gated, not always-available core behavior.
+
+Full policy: [docs/migration-policy.md](docs/migration-policy.md).
+
+---
+
+## More Docs
+
+- [Documentation Map](docs/README.md)
+- [Architecture](docs/architecture.md)
+- [Migration Policy](docs/migration-policy.md)
+- [Release Process](docs/release-process.md)
 - [CHANGELOG](CHANGELOG.md)
 - [ROADMAP](ROADMAP.md)
 - [CONTRIBUTING](CONTRIBUTING.md)
 
 ---
 
-## License
+## License & Credits
 
 MIT — see [LICENSE](LICENSE).
-
-## Credits
 
 - Original MCP server by [Coding-Solo](https://github.com/Coding-Solo/godot-mcp)
 - GoPeak enhancements by [HaD0Yun](https://github.com/HaD0Yun)
