@@ -723,8 +723,8 @@ func add_state_machine_transition(args: Dictionary) -> Dictionary:
 			return {"ok": false, "error": "Unsupported transitionType: " + transition_type}
 
 	transition.priority = priority
-	transition.auto_advance = auto_advance
-	transition.crossfade_time = crossfade
+	transition.advance_mode = AnimationNodeStateMachineTransition.ADVANCE_MODE_ENABLED if auto_advance else AnimationNodeStateMachineTransition.ADVANCE_MODE_DISABLED
+	transition.xfade_time = crossfade
 	if not advance_condition.is_empty():
 		transition.advance_condition = StringName(advance_condition)
 
@@ -889,7 +889,7 @@ func set_tree_parameter(args: Dictionary) -> Dictionary:
 	var parsed_value = _parse_json_maybe(value) if typeof(value) == TYPE_STRING else value
 	parsed_value = _parse_value(parsed_value)
 
-	anim_tree.set_parameter(StringName(parameter_path), parsed_value)
+	anim_tree.set(parameter_path, parsed_value)
 
 	var save_err := _save_scene(scene_root, scene_path)
 	if not save_err.is_empty():

@@ -624,9 +624,14 @@ func set_particle_color_gradient(args: Dictionary) -> Dictionary:
 				points.append(pt)
 				color_values.append(col)
 
-		gradient.clear_points()
-		for i in range(points.size()):
-			gradient.add_point(points[i], color_values[i])
+		if points.size() > 0:
+			var offsets_packed := PackedFloat32Array()
+			var colors_packed := PackedColorArray()
+			for i in range(points.size()):
+				offsets_packed.append(points[i])
+				colors_packed.append(color_values[i])
+			gradient.offsets = offsets_packed
+			gradient.colors = colors_packed
 
 	# Create gradient texture
 	var gradient_tex := GradientTexture1D.new()

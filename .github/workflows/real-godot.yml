@@ -1,0 +1,101 @@
+name: Real-Godot Tests
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: 'Phase to test (phase1, phase2, phase3, phase4, e2e, all)'
+        required: false
+        default: 'all'
+
+concurrency:
+  group: real-godot
+  cancel-in-progress: true
+
+env:
+  GOPEAK_TOOL_PROFILE: full
+  GOPEAK_REAL_GODOT_KEEP_RUNS: '0'
+
+jobs:
+  test-real-godot:
+    name: Real-Godot Functional Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'run-real-godot')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/
+          key: godot-4.2-stable
+
+      - name: Install Godot 4.2
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.local/share/godot
+          cd ~/.local/share/godot
+          wget -q https://github.com/godotengine/godot/releases/download/4.2-stable/Godot_v4.2-stable_linux.x86_64.zip -O godot.zip
+          unzip -q godot.zip
+          mv Godot_v4.2-stable_linux.x86_64 godot4.2
+          touch godot4.2.stable
+          rm godot.zip
+          ln -sf godot4.2 godot
+          chmod +x godot
+
+      - name: Add Godot to PATH
+        run: echo "$HOME/.local/share/godot" >> $GITHUB_PATH
+
+      - name: Verify Godot installation
+        run: godot --headless --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Generate test assets
+        run: node scripts/generate-test-assets.mjs
+
+      - name: Run real-godot tests
+        run: |
+          export GOPEAK_GODOT_BIN="$HOME/.local/share/godot/godot"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.phase }}" ]; then
+            npm run test:real-godot -- --filter=${{ inputs.phase }}
+          else
+            npm run test:real-godot
+          fi
+
+      - name: Upload test artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-runs
+          path: .test-runs/**
+          retention-days: 7
+
+      - name: Upload godot logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-logs
+          path: .test-runs/**/godot.log
+          retention-days: 7

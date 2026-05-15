@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3 uid="uid://danimationtree001"]
+
+[sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_1"]
+
+[sub_resource type="AnimationNodeBlendTree" id="AnimationNodeBlendTree_1"]
+
+[node name="AnimationTreeDemo" type="Node"]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+
+[node name="AnimationTree" type="AnimationTree" parent="."]
+tree_root = SubResource("AnimationNodeStateMachine_1")
+anim_player = NodePath("../AnimationPlayer")
+
+[node name="AnimationTreeBlend" type="AnimationTree" parent="."]
+tree_root = SubResource("AnimationNodeBlendTree_1")
+anim_player = NodePath("../AnimationPlayer")

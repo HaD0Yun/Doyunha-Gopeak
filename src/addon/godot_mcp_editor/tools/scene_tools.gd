@@ -987,9 +987,7 @@ func execute_editor_script(args: Dictionary) -> Dictionary:
 		return {"ok": false, "error": "Editor plugin not available (execute_editor_script requires editor context)"}
 
 	var ei := _editor_plugin.get_editor_interface()
-	var edited_scene := ei.get_edited_scene_root()
-	if not edited_scene:
-		return {"ok": false, "error": "No scene open in the editor"}
+	var edited_scene = ei.get_edited_scene_root()
 
 	var script := GDScript.new()
 	script.source_code = script_code

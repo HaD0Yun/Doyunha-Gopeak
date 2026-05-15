@@ -1,0 +1,20 @@
+[gd_scene load_steps=3 format=3 uid="uid://dmain2d001"]
+
+[ext_resource type="Script" path="res://scripts/player_controller.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/ui_main.tscn" id="2"]
+
+[node name="Main" type="Node2D"]
+
+[node name="Player" type="CharacterBody2D" parent="."]
+script = ExtResource("1")
+
+[node name="UI" parent="." instance=ExtResource("2")]
+
+[node name="SpriteA" type="Sprite2D" parent="."]
+position = Vector2(50, 50)
+
+[node name="SpriteB" type="Sprite2D" parent="."]
+position = Vector2(100, 50)
+
+[node name="Camera2D" type="Camera2D" parent="."]
+current = true

@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { isAbsolute, relative as relativePath, resolve as resolvePath } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { isAbsolute, join, relative as relativePath, resolve as resolvePath } from 'node:path';
 import { compareImages, type CompareOptions, type RegionRect } from './image_diff.js';
 import {
   generateRunId,
@@ -118,7 +118,7 @@ export async function handleWaitForNode(args: any, deps: ToolDeps): Promise<Runt
     if (Date.now() - start >= timeoutMs) break;
     await sleep(intervalMs);
   }
-  return errorResponse(`Timed out waiting for node '${path}' after ${timeoutMs}ms (${lastError}).`);
+  return textResponse({ found: false, path, elapsed_ms: Date.now() - start, timeout_ms: timeoutMs, reason: lastError });
 }
 
 // ---------- monitor_properties ----------
@@ -129,10 +129,10 @@ export async function handleMonitorProperties(args: any, deps: ToolDeps): Promis
     return errorResponse('monitor_properties requires `path` and `properties` array.');
   }
   const params = {
-    path,
+    node_paths: [path],
     properties,
     duration_ms: clampNumber(args?.duration_ms ?? args?.durationMs, 16, 10000, 1000),
-    sample_rate_hz: clampNumber(args?.sample_rate_hz ?? args?.sampleRateHz, 1, 120, 30),
+    sample_hz: clampNumber(args?.sample_rate_hz ?? args?.sampleRateHz, 1, 120, 30),
   };
   const res = await deps.runtimeCommand('monitor_properties', params);
   const parsed = parseRuntimePayload(res);
@@ -146,17 +146,17 @@ export async function handleBatchGetProperties(args: any, deps: ToolDeps): Promi
   if (!queries || queries.length === 0) {
     return errorResponse('batch_get_properties requires a non-empty `queries` array of {path, properties}.');
   }
-  const res = await deps.runtimeCommand('batch_get_properties', { queries });
+  const res = await deps.runtimeCommand('batch_get_properties', { targets: queries });
   const parsed = parseRuntimePayload(res);
   if (!isOk(parsed)) return errorResponse(errorTextFromPayload(parsed, 'batch_get_properties failed.'));
-  return textResponse(parsed);
+  return textResponse({ ...parsed, results: parsed.targets ?? [] });
 }
 
 // ---------- find_ui_elements ----------
 export async function handleFindUiElements(args: any, deps: ToolDeps): Promise<RuntimeResponse> {
   const params: Record<string, unknown> = {};
-  if (typeof args?.text === 'string') params.text = args.text;
-  if (typeof args?.type === 'string') params.type = args.type;
+  if (typeof args?.text === 'string') params.filter = args.text;
+  if (typeof args?.type === 'string') params.class = args.type;
   if (typeof args?.name === 'string') params.name = args.name;
   if (typeof args?.root === 'string') params.root = args.root;
   if (typeof args?.case_sensitive === 'boolean') params.case_sensitive = args.case_sensitive;
@@ -166,7 +166,7 @@ export async function handleFindUiElements(args: any, deps: ToolDeps): Promise<R
   const res = await deps.runtimeCommand('find_ui_elements', params);
   const parsed = parseRuntimePayload(res);
   if (!isOk(parsed)) return errorResponse(errorTextFromPayload(parsed, 'find_ui_elements failed.'));
-  return textResponse(parsed);
+  return textResponse({ ...parsed, matches: parsed.elements ?? [] });
 }
 
 // ---------- click_button_by_text ----------
@@ -272,15 +272,17 @@ export async function handleAssertNodeState(args: any, deps: ToolDeps): Promise<
     );
   }
 
-  const propsToQuery = expectations.filter((e) => e.property && e.op !== 'exists' && e.op !== 'not_exists').map((e) => e.property!);
+  const propsToQuery = expectations
+    .filter((e) => e.property && e.op !== 'exists' && e.op !== 'not_exists')
+    .map((e) => e.property!.split(/[.:]/)[0]);
   const uniqueProps = Array.from(new Set(propsToQuery));
 
   const res = await deps.runtimeCommand('batch_get_properties', {
-    queries: [{ path, properties: uniqueProps }],
+    targets: [{ path, properties: uniqueProps }],
   });
   const parsed = parseRuntimePayload(res);
 
-  const result0 = parsed?.results && parsed.results[0];
+  const result0 = (parsed?.targets ?? parsed?.results)?.[0];
   const nodeFound = result0?.found !== false;
   const isNotFoundError = !isOk(parsed) && (
     errorTextFromPayload(parsed, '').toLowerCase().includes('node not found') ||
@@ -295,7 +297,7 @@ export async function handleAssertNodeState(args: any, deps: ToolDeps): Promise<
     return errorResponse(errorTextFromPayload(parsed, 'assert_node_state: failed to read node state.'));
   }
 
-  const props: Record<string, any> = result0.properties || {};
+  const props: Record<string, any> = result0.values || result0.properties || {};
 
   const results = expectations.map((exp, i) => {
     let actual: any;
@@ -309,7 +311,16 @@ export async function handleAssertNodeState(args: any, deps: ToolDeps): Promise<
     if (!nodeFound) {
       return { index: i, property: exp.property ?? null, op: exp.op, expected: exp.value, actual: undefined, ok: false, error: 'node not found' };
     }
-    actual = exp.property ? props[exp.property] : undefined;
+    if (exp.property) {
+      const parts = exp.property.split(/[.:]/);
+      actual = props[parts[0]];
+      for (let pi = 1; pi < parts.length; pi++) {
+        if (actual == null || typeof actual !== 'object') { actual = undefined; break; }
+        actual = actual[parts[pi]];
+      }
+    } else {
+      actual = undefined;
+    }
     const evalRes = evalExpectation(actual, exp);
     return { index: i, property: exp.property ?? null, op: exp.op, expected: exp.value, actual, ok: evalRes.ok, error: evalRes.ok ? undefined : evalRes.reason };
   });
@@ -344,6 +355,7 @@ export async function handleAssertScreenText(args: any, deps: ToolDeps): Promise
 
   return textResponse({
     passed: matches.length > 0,
+    found: matches.length > 0,
     needle: text,
     case_sensitive: caseSensitive,
     match_count: matches.length,
@@ -357,14 +369,15 @@ function resolveProjectFile(projectPath: string | null, inputPath: string): stri
   if (!projectPath) {
     throw new Error('Image path requires a project path. Set a Godot project path or pass base64 data.');
   }
-  if (isAbsolute(inputPath)) {
+  const stripped = inputPath.startsWith('res://') ? inputPath.slice(6) : inputPath;
+  if (isAbsolute(stripped)) {
     throw new Error('Image path must be relative to the project directory.');
   }
-  const decodedPath = decodeURIComponent(inputPath);
+  const decodedPath = decodeURIComponent(stripped);
   if (decodedPath.split(/[\\/]/).some((seg) => seg === '..')) {
     throw new Error('Image path may not contain ".." segments.');
   }
-  const abs = resolvePath(projectPath, inputPath);
+  const abs = resolvePath(projectPath, decodedPath);
   const rel = relativePath(projectPath, abs);
   if (rel.startsWith('..') || isAbsolute(rel)) {
     throw new Error('Image path escapes the project directory.');
@@ -437,18 +450,23 @@ export async function handleCaptureFrames(args: any, deps: ToolDeps): Promise<Ru
   const res = await deps.runtimeCommand('capture_frames', params);
   const parsed = parseRuntimePayload(res);
   if (!isOk(parsed)) return errorResponse(errorTextFromPayload(parsed, 'capture_frames failed.'));
-  return textResponse(parsed);
+  const frames = Array.isArray(parsed.frames)
+    ? parsed.frames.map((f: any) => ({ ...f, mimeType: 'image/png' }))
+    : [];
+  return textResponse({ ...parsed, frames });
 }
 
 // ---------- get_editor_screenshot ----------
-export async function handleGetEditorScreenshot(_args: any, _deps: ToolDeps): Promise<RuntimeResponse> {
-  return errorResponse(
-    'get_editor_screenshot is not available in this build. The MCP runtime addon captures the running game viewport (use capture_screenshot). Editor-side capture requires the editor plugin bridge.',
-    [
-      'Use capture_screenshot to capture the running game viewport.',
-      'For editor-side capture, ensure the Godot editor plugin bridge is connected.',
-    ],
-  );
+export async function handleGetEditorScreenshot(_args: any, deps: ToolDeps): Promise<RuntimeResponse> {
+  const res = await deps.runtimeCommand('capture_screenshot', {});
+  const parsed = parseRuntimePayload(res);
+  if (isOk(parsed) && parsed?.data) {
+    return res;
+  }
+  return textResponse({
+    available: false,
+    reason: 'No running game with MCP runtime addon found. Use capture_screenshot to capture the running game viewport.',
+  });
 }
 
 // ---------- start/stop/replay recording ----------
@@ -464,10 +482,17 @@ export async function handleStartRecording(args: any, deps: ToolDeps): Promise<R
 
 export async function handleStopRecording(args: any, deps: ToolDeps): Promise<RuntimeResponse> {
   const params: Record<string, unknown> = {};
-  if (typeof args?.name === 'string') params.name = args.name;
+  const recName = typeof args?.name === 'string' ? args.name : '';
+  if (recName) params.name = recName;
   const res = await deps.runtimeCommand('stop_recording', params);
   const parsed = parseRuntimePayload(res);
   if (!isOk(parsed)) return errorResponse(errorTextFromPayload(parsed, 'stop_recording failed.'));
+  const projectPath = deps.getProjectPath();
+  if (projectPath && recName) {
+    const recDir = join(projectPath, '.gopeak', 'recordings');
+    mkdirSync(recDir, { recursive: true });
+    writeFileSync(join(recDir, `${recName}.json`), JSON.stringify(parsed, null, 2), 'utf-8');
+  }
   return textResponse(parsed);
 }
 
@@ -480,17 +505,28 @@ export async function handleReplayRecording(args: any, deps: ToolDeps): Promise<
   const res = await deps.runtimeCommand('replay_recording', params);
   const parsed = parseRuntimePayload(res);
   if (!isOk(parsed)) return errorResponse(errorTextFromPayload(parsed, 'replay_recording failed.'));
-  return textResponse(parsed);
+  return textResponse({ ...parsed, success: true });
 }
 
 // ---------- get_performance_monitors ----------
 export async function handleGetPerformanceMonitors(args: any, deps: ToolDeps): Promise<RuntimeResponse> {
   const params: Record<string, unknown> = {};
-  if (Array.isArray(args?.monitors)) params.monitors = args.monitors;
+  const FPS_ALIASES: Record<string, string> = { 'time/fps': 'fps' };
+  const requestedNames: string[] = Array.isArray(args?.monitors) ? args.monitors : [];
+  const mappedNames = requestedNames.map((n) => FPS_ALIASES[n] ?? n);
+  if (mappedNames.length > 0) params.names = mappedNames;
   const res = await deps.runtimeCommand('get_performance_monitors', params);
   const parsed = parseRuntimePayload(res);
   if (!isOk(parsed)) return errorResponse(errorTextFromPayload(parsed, 'get_performance_monitors failed.'));
-  return textResponse(parsed);
+  const rawData: Record<string, unknown> = parsed.data ?? {};
+  // Re-map back to requested names (e.g. 'fps' → 'time/fps')
+  const monitors: Record<string, unknown> = { ...rawData };
+  for (const [alias, canonical] of Object.entries(FPS_ALIASES)) {
+    if (requestedNames.includes(alias) && canonical in rawData) {
+      monitors[alias] = rawData[canonical];
+    }
+  }
+  return textResponse({ ...parsed, monitors });
 }
 
 // ---------- get_test_report ----------
@@ -764,9 +800,12 @@ export async function handleRunTestScenario(args: any, deps: ToolDeps): Promise<
     return errorResponse(`Test scenario completed but persistence failed: ${(err as Error).message}`);
   }
 
+  const failedSteps = stepRecords.filter((s) => !s.ok).length;
+  const failedAsserts = assertRecords.filter((a) => !a.ok).length;
   return textResponse({
     id,
     passed,
+    failed: failedSteps + failedAsserts,
     durationMs,
     uri: `godot://test-run/${id}`,
     path,
@@ -775,8 +814,8 @@ export async function handleRunTestScenario(args: any, deps: ToolDeps): Promise<
       step_count: stepRecords.length,
       assert_count: assertRecords.length,
       teardown_count: teardownRecords.length,
-      failed_steps: stepRecords.filter((s) => !s.ok).length,
-      failed_asserts: assertRecords.filter((a) => !a.ok).length,
+      failed_steps: failedSteps,
+      failed_asserts: failedAsserts,
     },
   });
 }

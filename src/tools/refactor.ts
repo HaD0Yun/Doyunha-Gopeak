@@ -399,7 +399,11 @@ export function getSceneDependencies(
   const results: SceneDependency[] = [];
 
   const sceneFiles = collectFiles(projectPath, projectPath, ['tscn'], (rel) => {
-    if (options?.scenePath) return rel.includes(options.scenePath);
+    if (options?.scenePath) {
+      const sp = options.scenePath.replace(/^res:\/\//, '');
+      const normalizedRel = rel.replace(/\\/g, '/');
+      return normalizedRel.includes(sp) || normalizedRel.endsWith(sp);
+    }
     return true;
   });
 

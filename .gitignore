@@ -24,5 +24,8 @@ Thumbs.db
 *.swp
 *.swo
 
+# Test runs
+.test-runs/
+
 # Coverage directory
 coverage/

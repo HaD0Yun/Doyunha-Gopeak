@@ -1756,8 +1756,20 @@ class GodotServer {
         // Project Visualizer Tool
         case 'map_project':
           return await this.handleMapProject(request.params.arguments);
-        case 'capture_screenshot':
-          return await this.handleRuntimeCommand('capture_screenshot', request.params.arguments);
+        case 'capture_screenshot': {
+          const captureResult = await this.handleRuntimeCommand('capture_screenshot', request.params.arguments);
+          const captureArgs = this.normalizeParameters(request.params.arguments || {});
+          const savePath: string | undefined = captureArgs?.path;
+          if (savePath && this.lastProjectPath) {
+            const imgContent = (captureResult.content || []).find((c: any) => c.type === 'image' && c.data);
+            if (imgContent) {
+              const normalized = savePath.startsWith('res://') ? savePath.slice(6) : savePath;
+              const absPath = join(this.lastProjectPath, normalized);
+              try { mkdirSync(dirname(absPath), { recursive: true }); writeFileSync(absPath, Buffer.from(imgContent.data as string, 'base64')); } catch { /* ignore */ }
+            }
+          }
+          return captureResult;
+        }
         case 'capture_viewport':
           return await this.handleRuntimeCommand('capture_viewport', request.params.arguments);
         case 'inject_action':
@@ -5452,13 +5464,6 @@ class GodotServer {
    */
   private async handleGetRuntimeStatus(args: any) {
     args = this.normalizeParameters(args);
-    
-    if (!args.projectPath) {
-      return this.createErrorResponse(
-        'Project path is required',
-        ['Provide a valid path to a Godot project directory']
-      );
-    }
 
     try {
       const runtime = await this.handleRuntimeCommand('ping', {});
@@ -7572,7 +7577,7 @@ uniform float dissolve_amount : hint_range(0.0, 1.0) = 0.0;
     if (!nodePath) throw new McpError(ErrorCode.InvalidParams, 'nodePath is required');
     const propertyName = args?.propertyName || args?.property_name;
     if (!propertyName) throw new McpError(ErrorCode.InvalidParams, 'propertyName is required');
-    const propertyValue = args?.propertyValue || args?.property_value;
+    const propertyValue = args?.propertyValue !== undefined ? args?.propertyValue : args?.property_value;
     if (propertyValue === undefined) throw new McpError(ErrorCode.InvalidParams, 'propertyValue is required');
     let parsedValue: unknown = propertyValue;
     if (typeof propertyValue === 'string') {

@@ -175,9 +175,8 @@ func add_sprite_2d(args: Dictionary) -> Dictionary:
 		sprite.scale = _parse_value(scale, TYPE_VECTOR2)
 
 	parent.add_child(sprite)
-	var edited_root = _editor_plugin.get_editor_interface().get_edited_scene_root()
-	if sprite.get_parent() and _editor_plugin and edited_root:
-		sprite.set_owner(edited_root)
+	if sprite.get_parent() and _editor_plugin:
+		_set_owner_safe(sprite, scene_root)
 
 	_save_scene(scene_root, scene_res_path)
 	return {
@@ -229,7 +228,7 @@ func setup_camera_2d(args: Dictionary) -> Dictionary:
 
 	parent.add_child(camera)
 	if camera.get_parent() and _editor_plugin:
-		camera.set_owner(_editor_plugin.get_editor_interface().get_edited_scene_root())
+		_set_owner_safe(camera, scene_root)
 
 	_save_scene(scene_root, scene_res_path)
 	return {
@@ -261,11 +260,11 @@ func add_canvas_layer(args: Dictionary) -> Dictionary:
 	var canvas_layer := CanvasLayer.new()
 	canvas_layer.name = node_name
 	canvas_layer.layer = layer_index
-	canvas_layer.follow_viewport = follow_viewport
+	canvas_layer.follow_viewport_enabled = follow_viewport
 
 	parent.add_child(canvas_layer)
 	if canvas_layer.get_parent() and _editor_plugin:
-		canvas_layer.set_owner(_editor_plugin.get_editor_interface().get_edited_scene_root())
+		_set_owner_safe(canvas_layer, scene_root)
 
 	_save_scene(scene_root, scene_res_path)
 	return {
@@ -298,7 +297,7 @@ func setup_parallax_background(args: Dictionary) -> Dictionary:
 
 	parent.add_child(parallax_bg)
 	if parallax_bg.get_parent() and _editor_plugin:
-		parallax_bg.set_owner(_editor_plugin.get_editor_interface().get_edited_scene_root())
+		_set_owner_safe(parallax_bg, scene_root)
 
 	var created_layers: Array = []
 
@@ -318,7 +317,7 @@ func setup_parallax_background(args: Dictionary) -> Dictionary:
 
 		parallax_bg.add_child(parallax_layer)
 		if parallax_layer.get_parent() and _editor_plugin:
-			parallax_layer.set_owner(_editor_plugin.get_editor_interface().get_edited_scene_root())
+			_set_owner_safe(parallax_layer, scene_root)
 
 		if texture_path != "":
 			var sprite := Sprite2D.new()
@@ -328,7 +327,7 @@ func setup_parallax_background(args: Dictionary) -> Dictionary:
 				sprite.texture = load(tex_res_path)
 			parallax_layer.add_child(sprite)
 			if sprite.get_parent() and _editor_plugin:
-				sprite.set_owner(_editor_plugin.get_editor_interface().get_edited_scene_root())
+				_set_owner_safe(sprite, scene_root)
 
 		created_layers.push_back(parent_node_path + "/" + node_name + "/" + layer_name)
 
@@ -347,7 +346,13 @@ func add_area_2d(args: Dictionary) -> Dictionary:
 	var node_name: String = args.get("nodeName", "Area2D")
 	var shape_type: String = args.get("shape", "rectangle")
 	var size: Dictionary = args.get("size", {"x": 32, "y": 32})
-	var layers: int = args.get("layers", 1)
+	var layers_raw = args.get("layers", 1)
+	var layers: int = 0
+	if typeof(layers_raw) == TYPE_ARRAY:
+		for bit in layers_raw:
+			layers |= (1 << (int(bit) - 1))
+	else:
+		layers = int(layers_raw)
 	var monitorable: bool = args.get("monitorable", true)
 
 	var scene_res_path := _to_scene_res_path(project_path, scene_path)
@@ -369,12 +374,12 @@ func add_area_2d(args: Dictionary) -> Dictionary:
 
 	parent.add_child(area)
 	if area.get_parent() and _editor_plugin:
-		area.set_owner(_editor_plugin.get_editor_interface().get_edited_scene_root())
+		_set_owner_safe(area, scene_root)
 
 	var shape_node: CollisionShape2D = _create_collision_shape(shape_type, size, node_name + "_shape")
 	area.add_child(shape_node)
 	if shape_node.get_parent() and _editor_plugin:
-		shape_node.set_owner(_editor_plugin.get_editor_interface().get_edited_scene_root())
+		_set_owner_safe(shape_node, scene_root)
 
 	_save_scene(scene_root, scene_res_path)
 	return {
@@ -392,7 +397,7 @@ func _create_collision_shape(shape_type: String, size: Dictionary, shape_name: S
 	var vec_size: Vector2 = _parse_value(size, TYPE_VECTOR2)
 
 	match shape_type:
-		"rectangle":
+		"rectangle", "box":
 			var rect_shape := RectangleShape2D.new()
 			rect_shape.size = vec_size
 			shape_node.shape = rect_shape
@@ -436,12 +441,12 @@ func setup_character_body_2d(args: Dictionary) -> Dictionary:
 
 	parent.add_child(character_body)
 	if character_body.get_parent() and _editor_plugin:
-		character_body.set_owner(_editor_plugin.get_editor_interface().get_edited_scene_root())
+		_set_owner_safe(character_body, scene_root)
 
 	var shape_node: CollisionShape2D = _create_collision_shape(shape_type, size, node_name + "_collision")
 	character_body.add_child(shape_node)
 	if shape_node.get_parent() and _editor_plugin:
-		shape_node.set_owner(_editor_plugin.get_editor_interface().get_edited_scene_root())
+		_set_owner_safe(shape_node, scene_root)
 
 	if sprite_path != "":
 		var sprite := Sprite2D.new()
@@ -451,7 +456,7 @@ func setup_character_body_2d(args: Dictionary) -> Dictionary:
 			sprite.texture = load(tex_res_path)
 		character_body.add_child(sprite)
 		if sprite.get_parent() and _editor_plugin:
-			sprite.set_owner(_editor_plugin.get_editor_interface().get_edited_scene_root())
+			_set_owner_safe(sprite, scene_root)
 
 	if script_template != "" and script_template != "none":
 		var script_obj: GDScript = _create_movement_script(script_template, node_name)
@@ -532,7 +537,13 @@ func setup_static_body_2d(args: Dictionary) -> Dictionary:
 	var node_name: String = args.get("nodeName", "StaticBody2D")
 	var shape_type: String = args.get("shape", "rectangle")
 	var size: Dictionary = args.get("size", {"x": 32, "y": 32})
-	var layers: int = args.get("layers", 1)
+	var layers_raw = args.get("layers", 1)
+	var layers: int = 0
+	if typeof(layers_raw) == TYPE_ARRAY:
+		for bit in layers_raw:
+			layers |= (1 << (int(bit) - 1))
+	else:
+		layers = int(layers_raw)
 
 	var scene_res_path := _to_scene_res_path(project_path, scene_path)
 	var result := _load_scene(scene_res_path)
@@ -552,12 +563,12 @@ func setup_static_body_2d(args: Dictionary) -> Dictionary:
 
 	parent.add_child(static_body)
 	if static_body.get_parent() and _editor_plugin:
-		static_body.set_owner(_editor_plugin.get_editor_interface().get_edited_scene_root())
+		_set_owner_safe(static_body, scene_root)
 
 	var shape_node: CollisionShape2D = _create_collision_shape(shape_type, size, node_name + "_collision")
 	static_body.add_child(shape_node)
 	if shape_node.get_parent() and _editor_plugin:
-		shape_node.set_owner(_editor_plugin.get_editor_interface().get_edited_scene_root())
+		_set_owner_safe(shape_node, scene_root)
 
 	_save_scene(scene_root, scene_res_path)
 	return {
@@ -590,7 +601,7 @@ func add_y_sort_container(args: Dictionary) -> Dictionary:
 
 	parent.add_child(y_sort)
 	if y_sort.get_parent() and _editor_plugin:
-		y_sort.set_owner(_editor_plugin.get_editor_interface().get_edited_scene_root())
+		_set_owner_safe(y_sort, scene_root)
 
 	_save_scene(scene_root, scene_res_path)
 	return {
@@ -663,12 +674,13 @@ func add_path_2d(args: Dictionary) -> Dictionary:
 		var in_tangent: Vector2 = _parse_value(point_dict.get("in", {}), TYPE_VECTOR2)
 		var out_tangent: Vector2 = _parse_value(point_dict.get("out", {}), TYPE_VECTOR2)
 		curve.add_point(point, in_tangent, out_tangent)
-	curve.closed = closed
+	if closed and curve.point_count > 0:
+		curve.add_point(curve.get_point_position(0))
 	path_node.curve = curve
 
 	parent.add_child(path_node)
 	if path_node.get_parent() and _editor_plugin:
-		path_node.set_owner(_editor_plugin.get_editor_interface().get_edited_scene_root())
+		_set_owner_safe(path_node, scene_root)
 
 	_save_scene(scene_root, scene_res_path)
 	return {

@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://drefactor_a"]
+
+[ext_resource type="Script" path="res://scripts/player_controller.gd" id="1"]
+
+[node name="RefactorTargetA" type="Node2D"]
+
+[node name="Player" type="CharacterBody2D" parent="."]
+script = ExtResource("1")
