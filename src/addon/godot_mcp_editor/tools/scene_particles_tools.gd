@@ -639,24 +639,33 @@ func set_particle_color_gradient(args: Dictionary) -> Dictionary:
 	gradient_tex.width = 256
 
 	# Apply to particles
+	var applied := false
 	if is_particles_3d:
-		var proc_mat: ParticleProcessMaterial
 		if target is GPUParticles3D:
-			proc_mat = (target as GPUParticles3D).process_material
+			var proc_mat := (target as GPUParticles3D).process_material
+			if proc_mat and proc_mat is ParticleProcessMaterial:
+				proc_mat.color_ramp = gradient_tex
+				applied = true
 		elif target is CPUParticles3D:
-			proc_mat = (target as CPUParticles3D).process_material
-
-		if proc_mat:
-			proc_mat.color_ramp = gradient_tex
+			var cpu := target as CPUParticles3D
+			if "process_material" in cpu:
+				var proc_mat = cpu.get("process_material")
+				if proc_mat and proc_mat is ParticleProcessMaterial:
+					proc_mat.color_ramp = gradient_tex
+					applied = true
 	else:
-		var proc_mat: ParticleProcessMaterial
 		if target is GPUParticles2D:
-			proc_mat = (target as GPUParticles2D).process_material
+			var proc_mat := (target as GPUParticles2D).process_material
+			if proc_mat and proc_mat is ParticleProcessMaterial:
+				proc_mat.color_ramp = gradient_tex
+				applied = true
 		elif target is CPUParticles2D:
-			proc_mat = (target as CPUParticles2D).process_material
-
-		if proc_mat:
-			proc_mat.color_ramp = gradient_tex
+			var cpu := target as CPUParticles2D
+			if "process_material" in cpu:
+				var proc_mat = cpu.get("process_material")
+				if proc_mat and proc_mat is ParticleProcessMaterial:
+					proc_mat.color_ramp = gradient_tex
+					applied = true
 
 	# Save gradient as resource if path provided
 	var save_path := ""

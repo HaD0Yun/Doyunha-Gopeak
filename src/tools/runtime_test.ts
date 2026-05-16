@@ -68,6 +68,7 @@ function isOk(parsed: any): boolean {
   if (!parsed || typeof parsed !== 'object') {
     return false;
   }
+  if (parsed.raw) return false;
   if (parsed.success === false) return false;
   if (parsed.type === 'error' || parsed.error) return false;
   return true;
@@ -137,7 +138,20 @@ export async function handleMonitorProperties(args: any, deps: ToolDeps): Promis
   const res = await deps.runtimeCommand('monitor_properties', params);
   const parsed = parseRuntimePayload(res);
   if (!isOk(parsed)) return errorResponse(errorTextFromPayload(parsed, 'monitor_properties failed.'));
-  return textResponse(parsed);
+  const samples = (parsed.samples ?? []).map((s: any) => {
+    const flat: any = { t_ms: s.t_ms, frame: s.frame };
+    if (s.nodes && typeof s.nodes === 'object') {
+      for (const nodePath of Object.keys(s.nodes)) {
+        const nodeData = s.nodes[nodePath];
+        if (nodeData?.values && typeof nodeData.values === 'object') {
+          Object.assign(flat, nodeData.values);
+        }
+        flat._node = { path: nodePath, found: nodeData?.found ?? false };
+      }
+    }
+    return flat;
+  });
+  return textResponse({ ...parsed, samples });
 }
 
 // ---------- batch_get_properties ----------
@@ -148,8 +162,33 @@ export async function handleBatchGetProperties(args: any, deps: ToolDeps): Promi
   }
   const res = await deps.runtimeCommand('batch_get_properties', { targets: queries });
   const parsed = parseRuntimePayload(res);
-  if (!isOk(parsed)) return errorResponse(errorTextFromPayload(parsed, 'batch_get_properties failed.'));
-  return textResponse({ ...parsed, results: parsed.targets ?? [] });
+  if (!isOk(parsed)) {
+    const errMsg = errorTextFromPayload(parsed, 'batch_get_properties failed.');
+    const rawText = typeof parsed?.raw === 'string' && parsed.raw.length < 500 ? `: ${parsed.raw}` : '';
+    return errorResponse(errMsg + rawText);
+  }
+  const results = (parsed.targets ?? []).map((t: any) => ({
+    ...t,
+    properties: t.values ?? t.properties ?? {},
+  }));
+  return textResponse({ ...parsed, results });
+}
+
+// ---------- get_property ----------
+export async function handleGetProperty(args: any, deps: ToolDeps): Promise<RuntimeResponse> {
+  const path = typeof args?.path === 'string' ? args.path : null;
+  const property = typeof args?.property === 'string' ? args.property : null;
+  if (!path || !property) {
+    return errorResponse('get_property requires `path` and `property`.');
+  }
+  const res = await deps.runtimeCommand('get_property', { path, property });
+  const parsed = parseRuntimePayload(res);
+  if (!isOk(parsed)) {
+    const errMsg = errorTextFromPayload(parsed, 'get_property failed.');
+    const rawText = typeof parsed?.raw === 'string' && parsed.raw.length < 500 ? `: ${parsed.raw}` : '';
+    return errorResponse(errMsg + rawText);
+  }
+  return textResponse(parsed);
 }
 
 // ---------- find_ui_elements ----------
@@ -165,7 +204,11 @@ export async function handleFindUiElements(args: any, deps: ToolDeps): Promise<R
 
   const res = await deps.runtimeCommand('find_ui_elements', params);
   const parsed = parseRuntimePayload(res);
-  if (!isOk(parsed)) return errorResponse(errorTextFromPayload(parsed, 'find_ui_elements failed.'));
+  if (!isOk(parsed)) {
+    const errMsg = errorTextFromPayload(parsed, 'find_ui_elements failed.');
+    const rawText = typeof parsed?.raw === 'string' && parsed.raw.length < 500 ? `: ${parsed.raw}` : '';
+    return errorResponse(errMsg + rawText);
+  }
   return textResponse({ ...parsed, matches: parsed.elements ?? [] });
 }
 
@@ -744,13 +787,25 @@ export async function handleRunTestScenario(args: any, deps: ToolDeps): Promise<
   if (!aborted) {
     for (let i = 0; i < (scenario.steps?.length ?? 0); i++) {
       const step = scenario.steps![i];
-      const rec = await runScenarioStep(step, deps);
-      rec.index = i;
-      stepRecords.push(rec);
-      if (!rec.ok && !step.optional) {
-        aborted = true;
-        break;
+      const repeatCount = clampNumber(step.args?.repeat ?? 1, 1, 1000, 1);
+      const repeatIntervalMs = clampNumber(step.args?.interval_ms ?? step.args?.intervalMs, 0, 10000, 0);
+      const cleanArgs = { ...step.args };
+      delete cleanArgs.repeat;
+      delete cleanArgs.interval_ms;
+      delete cleanArgs.intervalMs;
+      for (let r = 0; r < repeatCount; r++) {
+        const rec = await runScenarioStep({ ...step, args: cleanArgs }, deps);
+        rec.index = stepRecords.length;
+        stepRecords.push(rec);
+        if (!rec.ok && !step.optional) {
+          aborted = true;
+          break;
+        }
+        if (r < repeatCount - 1 && repeatIntervalMs > 0) {
+          await sleep(repeatIntervalMs);
+        }
       }
+      if (aborted) break;
     }
   }
 

@@ -467,15 +467,19 @@ func setup_camera_3d(args: Dictionary) -> Dictionary:
 	_set_owner_recursive(camera, root)
 
 	if has_target:
-		var dist := camera.global_position.distance_to(target_vec)
+		var camera_pos := camera.global_position if camera.is_inside_tree() else camera.position
+		var dist := camera_pos.distance_to(target_vec)
 		if dist >= 0.0001:
-			var direction := (target_vec - camera.global_position).normalized()
+			var direction := (target_vec - camera_pos).normalized()
 			var up_vector: Vector3
 			if abs(direction.dot(Vector3.UP)) > 0.999:
 				up_vector = Vector3.BACK
 			else:
 				up_vector = Vector3.UP
-			camera.look_at(target_vec, up_vector)
+			if camera.is_inside_tree():
+				camera.look_at(target_vec, up_vector)
+			else:
+				camera.look_at_from_position(camera.position, target_vec, up_vector)
 
 	var err := _save_scene(root, scene_path)
 	if not err.is_empty():

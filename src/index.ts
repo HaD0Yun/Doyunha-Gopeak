@@ -57,6 +57,7 @@ import {
   handleStartRecording,
   handleStopRecording,
   handleWaitForNode,
+  handleGetProperty,
   type ToolDeps as RuntimeTestToolDeps,
 } from './tools/runtime_test.js';
 import {
@@ -1787,6 +1788,8 @@ class GodotServer {
           return await handleMonitorProperties(request.params.arguments, this.getRuntimeTestDeps());
         case 'batch_get_properties':
           return await handleBatchGetProperties(request.params.arguments, this.getRuntimeTestDeps());
+        case 'get_property':
+          return await handleGetProperty(request.params.arguments, this.getRuntimeTestDeps());
         case 'find_ui_elements':
           return await handleFindUiElements(request.params.arguments, this.getRuntimeTestDeps());
         case 'click_button_by_text':

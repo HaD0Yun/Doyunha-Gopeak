@@ -104,14 +104,14 @@ func _handle_message(client: StreamPeerTCP, data: String) -> void:
 	
 	command_received.emit(command, params)
 	
-	var result = _execute_command(command, params)
-	if request_id != null:
-		result["id"] = request_id
-	
-	_send_response(client, result)
+	var result = _execute_command(command, params, client)
+	if result is Dictionary:
+		if request_id != null:
+			result["id"] = request_id
+		_send_response(client, result)
 
 
-func _execute_command(command: String, params: Dictionary) -> Dictionary:
+func _execute_command(command: String, params: Dictionary, client: StreamPeerTCP = null) -> Variant:
 	match command:
 		"ping":
 			return {"type": "pong", "timestamp": Time.get_unix_time_from_system()}
@@ -124,7 +124,10 @@ func _execute_command(command: String, params: Dictionary) -> Dictionary:
 		
 		"set_property":
 			return _cmd_set_property(params)
-		
+
+		"get_property":
+			return _cmd_get_property(params)
+
 		"call_method":
 			return _cmd_call_method(params)
 		
@@ -162,7 +165,8 @@ func _execute_command(command: String, params: Dictionary) -> Dictionary:
 			return _cmd_batch_get_properties(params)
 
 		"monitor_properties":
-			return _cmd_monitor_properties(params)
+			_cmd_monitor_properties_async(params, client)
+			return null
 
 		"find_ui_elements":
 			return _cmd_find_ui_elements(params)
@@ -249,6 +253,27 @@ func _cmd_set_property(params: Dictionary) -> Dictionary:
 		"property": property,
 		"old_value": _serialize_value(old_value),
 		"new_value": _serialize_value(node.get(property))
+	}
+
+
+func _cmd_get_property(params: Dictionary) -> Dictionary:
+	var node_path = params.get("path", "")
+	var property = params.get("property", "")
+
+	if node_path.is_empty() or property.is_empty():
+		return {"type": "error", "message": "Node path and property required"}
+
+	var node = get_tree().root.get_node_or_null(node_path)
+	if node == null:
+		return {"type": "error", "message": "Node not found: " + node_path}
+
+	var value = node.get(property)
+
+	return {
+		"type": "property_get",
+		"path": node_path,
+		"property": property,
+		"value": _serialize_value(value)
 	}
 
 
@@ -742,30 +767,32 @@ func _cmd_batch_get_properties(params: Dictionary) -> Dictionary:
 	return {"type": "batch_get_properties", "targets": results, "frame": Engine.get_process_frames()}
 
 
-func _cmd_monitor_properties(params: Dictionary) -> Dictionary:
-	# Synchronous sampler — collects N samples spaced by sample_ms, blocks on the runtime
-	# process until duration elapses. Caller should keep duration_ms reasonable (<= 5000ms).
+func _cmd_monitor_properties_async(params: Dictionary, client: StreamPeerTCP) -> void:
+	# Non-blocking async sampler — uses await to yield between samples,
+	# allowing the engine to process physics, input, and TCP messages.
 	var node_paths = params.get("node_paths", [])
 	var properties = params.get("properties", [])
 	var duration_ms = int(params.get("duration_ms", 1000))
 	var sample_hz = float(params.get("sample_hz", 30.0))
 
 	if not node_paths is Array or node_paths.is_empty():
-		return {"type": "error", "message": "node_paths must be a non-empty array"}
+		_send_response(client, {"type": "error", "message": "node_paths must be a non-empty array"})
+		return
 	if not properties is Array or properties.is_empty():
-		return {"type": "error", "message": "properties must be a non-empty array"}
+		_send_response(client, {"type": "error", "message": "properties must be a non-empty array"})
+		return
 
 	duration_ms = clamp(duration_ms, 16, 10000)
 	sample_hz = clamp(sample_hz, 1.0, 120.0)
-	var sample_interval_ms = int(round(1000.0 / sample_hz))
+	var sample_interval_s = 1.0 / sample_hz
 
 	var samples: Array = []
-	var start_us = Time.get_ticks_msec()
-	var end_us = start_us + duration_ms
+	var start_ms = Time.get_ticks_msec()
+	var end_ms = start_ms + duration_ms
 
-	while Time.get_ticks_msec() <= end_us:
+	while Time.get_ticks_msec() <= end_ms:
 		var sample := {
-			"t_ms": Time.get_ticks_msec() - start_us,
+			"t_ms": Time.get_ticks_msec() - start_ms,
 			"frame": Engine.get_process_frames(),
 			"nodes": {},
 		}
@@ -781,14 +808,17 @@ func _cmd_monitor_properties(params: Dictionary) -> Dictionary:
 				values[p] = _serialize_value(node.get(p))
 			sample["nodes"][path] = {"found": true, "values": values}
 		samples.append(sample)
-		OS.delay_msec(sample_interval_ms)
 
-	return {
+		if Time.get_ticks_msec() <= end_ms:
+			# Yield to the engine — allows physics, input, and TCP messages to process
+			await get_tree().create_timer(sample_interval_s).timeout
+
+	_send_response(client, {
 		"type": "monitor_properties",
 		"duration_ms": duration_ms,
 		"sample_hz": sample_hz,
 		"samples": samples,
-	}
+	})
 
 
 func _collect_controls_recursive(node: Node, out: Array, max_count: int) -> void:

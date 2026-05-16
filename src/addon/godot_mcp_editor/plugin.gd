@@ -78,7 +78,6 @@ func _on_tool_requested(request_id: String, tool_name: String, args: Dictionary)
 
 	if success:
 		var payload := result.duplicate(true)
-		payload.erase("ok")
 		_mcp_client.send_tool_result(request_id, true, payload, "")
 	else:
 		_mcp_client.send_tool_result(request_id, false, null, str(result.get("error", "Unknown error")))

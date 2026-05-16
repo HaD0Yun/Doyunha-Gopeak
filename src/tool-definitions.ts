@@ -2839,6 +2839,18 @@ export function buildToolDefinitions(godotBridgePort: number): MCPToolDefinition
           },
         },
         {
+          name: 'get_property',
+          description: 'Read a single property from a node in the running game. Returns {path, property, value}.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              path: { type: 'string', description: 'NodePath to the target node (e.g., "/root/Main/Player").' },
+              property: { type: 'string', description: 'Property name to read.' },
+            },
+            required: ['path', 'property'],
+          },
+        },
+        {
           name: 'find_ui_elements',
           description: 'Search the live scene tree for Control nodes (Button, Label, LineEdit, etc.) matching text, type, or name. Returns matches with path, type, text, and visibility.',
           inputSchema: {

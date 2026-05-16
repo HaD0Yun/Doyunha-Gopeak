@@ -568,13 +568,24 @@ func get_animation_tree_structure(args: Dictionary) -> Dictionary:
 				"position": {"x": pos.x, "y": pos.y},
 			})
 		result["connections"] = []
-		var conns: Array = root.get_node_connections()
-		for c in conns:
-			result["connections"].append({
-				"from": str(c.get("output_node", "")),
-				"to": str(c.get("input_node", "")),
-				"toPort": c.get("input_index", 0),
-			})
+		if root.has_method("get_node_connections"):
+			var conns: Array = root.get_node_connections()
+			for c in conns:
+				result["connections"].append({
+					"from": str(c.get("output_node", "")),
+					"to": str(c.get("input_node", "")),
+					"toPort": c.get("input_index", 0),
+				})
+		elif root.has_method("get_connection_count"):
+			for i in range(root.get_connection_count()):
+				var output_node = str(root.get_connection_output_node(i))
+				var output_port = root.get_connection_output_port(i)
+				var input_node = str(root.get_connection_input_node(i))
+				var input_port = root.get_connection_input_port(i)
+				result["connections"].append({
+					"from": output_node, "fromPort": output_port,
+					"to": input_node, "toPort": input_port,
+				})
 
 	scene_root.queue_free()
 	return result

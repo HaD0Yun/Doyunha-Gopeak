@@ -280,21 +280,29 @@ export function crossSceneSetProperty(
 
     const resPath = 'res://' + relativePath(projectPath, sceneFile).replace(/\\/g, '/');
 
-    const nodeNameRe = new RegExp(`\\[node.*?name="${escapeRegex(nodeName)}"[^\\]]*\\](?:[^[]|\\[(?!node\b))*`, 's');
+    const nodeNameRe = new RegExp(`\\[node[^\\]]*?name="${escapeRegex(nodeName)}"[^\\]]*\\][^[]*`, 's');
     const nodeMatch = content.match(nodeNameRe);
     if (!nodeMatch) continue;
 
-    if (nodeMatch[0].includes('=')) {
+    const nodeBlock = nodeMatch[0];
+    const trimBlock = nodeBlock.replace(/\n+$/, '');
+
+    if (nodeBlock.includes('=')) {
       const propRe = new RegExp(`^${escapeRegex(propertyName)}\\s*=\\s*.+$`, 'm');
-      if (propRe.test(nodeMatch[0])) {
-        content = content.replace(nodeMatch[0], nodeMatch[0].replace(propRe, `${propertyName} = ${valueStr}`));
+      if (propRe.test(trimBlock)) {
+        const replaced = trimBlock.replace(propRe, `${propertyName} = ${valueStr}`);
+        content = content.replace(nodeBlock, replaced + nodeBlock.slice(trimBlock.length));
       } else {
-        const insertIdx = content.indexOf(nodeMatch[0]) + nodeMatch[0].length;
-        content = content.slice(0, insertIdx) + `\n${propertyName} = ${valueStr}` + content.slice(insertIdx);
+        const offset = content.indexOf(nodeBlock);
+        content = content.slice(0, offset + trimBlock.length) +
+          `\n${propertyName} = ${valueStr}` +
+          content.slice(offset + trimBlock.length);
       }
     } else {
-      const insertIdx = content.indexOf(nodeMatch[0]) + nodeMatch[0].length;
-      content = content.slice(0, insertIdx) + `\n${propertyName} = ${valueStr}` + content.slice(insertIdx);
+      const offset = content.indexOf(nodeBlock);
+      content = content.slice(0, offset + trimBlock.length) +
+        `\n${propertyName} = ${valueStr}` +
+        content.slice(offset + trimBlock.length);
     }
 
     try {
@@ -345,26 +353,28 @@ export function batchSetProperty(
     }
 
     const resPath = 'res://' + relativePath(projectPath, sceneFile).replace(/\\/g, '/');
-    const nodeNameRe = new RegExp(`\\[node.*?name="${escapeRegex(nodeName)}"[^\\]]*\\](?:[^[]|\\[(?!node\b))*`, 's');
+    const nodeNameRe = new RegExp(`\\[node[^\\]]*?name="${escapeRegex(nodeName)}"[^\\]]*\\][^[]*`, 's');
     const nodeMatch = content.match(nodeNameRe);
     if (!nodeMatch) continue;
 
-    const nodeBlockStart = content.indexOf(nodeMatch[0]);
-    const nodeBlockEnd = nodeBlockStart + nodeMatch[0].length;
-    let nodeBlock = nodeMatch[0];
+    const nodeBlock = nodeMatch[0];
+    const trimBlock = nodeBlock.replace(/\n+$/, '');
+
+    const nodeBlockStart = content.indexOf(nodeBlock);
+    const nodeBlockEnd = nodeBlockStart + nodeBlock.length;
+    let workingBlock = trimBlock;
 
     for (const [propName, propValue] of Object.entries(properties)) {
       const valueStr = JSON.stringify(propValue);
       const propRe = new RegExp(`^${escapeRegex(propName)}\\s*=\\s*.+$`, 'm');
-      if (propRe.test(nodeBlock)) {
-        nodeBlock = nodeBlock.replace(propRe, `${propName} = ${valueStr}`);
+      if (propRe.test(workingBlock)) {
+        workingBlock = workingBlock.replace(propRe, `${propName} = ${valueStr}`);
       } else {
-        const insertIdx = nodeBlock.length;
-        nodeBlock = nodeBlock.slice(0, insertIdx) + `\n${propName} = ${valueStr}` + nodeBlock.slice(insertIdx);
+        workingBlock = workingBlock + `\n${propName} = ${valueStr}`;
       }
     }
 
-    content = content.slice(0, nodeBlockStart) + nodeBlock + content.slice(nodeBlockEnd);
+    content = content.slice(0, nodeBlockStart) + workingBlock + content.slice(nodeBlockEnd);
 
     try {
       writeFileSync(sceneFile, content, 'utf-8');

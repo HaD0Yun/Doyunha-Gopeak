@@ -1,6 +1,16 @@
-[gd_scene load_steps=3 format=3 uid="uid://danimationtree001"]
+[gd_scene load_steps=5 format=3 uid="uid://danimationtree001"]
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_Idle"]
+animation = &"Idle"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_Walk"]
+animation = &"Walk"
 
 [sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_1"]
+states/Idle/node = SubResource("AnimationNodeAnimation_Idle")
+states/Idle/position = Vector2(0, 0)
+states/Walk/node = SubResource("AnimationNodeAnimation_Walk")
+states/Walk/position = Vector2(200, 0)
 
 [sub_resource type="AnimationNodeBlendTree" id="AnimationNodeBlendTree_1"]
 

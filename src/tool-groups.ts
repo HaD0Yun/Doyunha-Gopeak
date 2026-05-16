@@ -133,6 +133,7 @@ export const TOOL_GROUPS: Record<string, ToolGroupDefinition> = {
       'wait_for_node',
       'monitor_properties',
       'batch_get_properties',
+      'get_property',
       'find_ui_elements',
       'click_button_by_text',
       'assert_node_state',
