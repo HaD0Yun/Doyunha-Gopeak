@@ -27,5 +27,9 @@ Thumbs.db
 # Test runs
 .test-runs/
 
+# Test fixture addons (copied in by test-support/real-godot/provision-project.mjs)
+test-fixtures/sample_project/addons/godot_mcp_editor/
+test-fixtures/sample_project/addons/godot_mcp_runtime/
+
 # Coverage directory
 coverage/
