@@ -3,6 +3,7 @@
 import { spawn } from 'node:child_process';
 import { existsSync, rmSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { createServer } from 'node:net';
 
 import { StdioJsonRpcClient, parseToolCallJson, sanitizeToolName } from './test-support/stdio-client.mjs';
 import { provisionProject, generateRunId } from './test-support/real-godot/provision-project.mjs';
@@ -132,8 +133,44 @@ async function stopProject() {
   }
 }
 
+// Verify the bridge and runtime ports are free. A previous run that didn't shut
+// down cleanly will leave a Godot process holding port 7777, and the new spawn
+// then silently routes all runtime queries to the dead instance — producing
+// dozens of mysterious "Node not found" failures. Fail fast with a clear message.
+async function checkPortIsFree(port) {
+  return new Promise((resolveCheck) => {
+    const server = createServer();
+    server.once('error', (err) => {
+      resolveCheck({ free: false, reason: err.code || err.message });
+    });
+    server.once('listening', () => {
+      server.close(() => resolveCheck({ free: true }));
+    });
+    server.listen(port, '127.0.0.1');
+  });
+}
+
+async function preflightPortCheck() {
+  const bridgePort = Number(ENV.GOPEAK_BRIDGE_PORT);
+  const runtimePort = Number(ENV.GOPEAK_RUNTIME_PORT);
+  const checks = await Promise.all([
+    checkPortIsFree(bridgePort).then((r) => ({ port: bridgePort, label: 'editor bridge', ...r })),
+    checkPortIsFree(runtimePort).then((r) => ({ port: runtimePort, label: 'runtime', ...r })),
+  ]);
+  const occupied = checks.filter((c) => !c.free);
+  if (occupied.length === 0) return;
+  const lines = occupied.map((c) => `  - port ${c.port} (${c.label}) is in use (${c.reason})`);
+  throw new Error(
+    `Required ports are already bound — likely a leftover Godot process from a previous run.\n` +
+    lines.join('\n') +
+    `\nKill the stale process (e.g. \`taskkill /F /IM Godot_v4.6.2-stable_win64_console.exe\` on Windows) and retry.`,
+  );
+}
+
 async function setup() {
   console.log('\n=== Test Setup ===');
+
+  await preflightPortCheck();
 
   currentRunId = generateRunId();
   currentProjectPath = provisionProject(FIXTURE_PROJECT, currentRunId);
