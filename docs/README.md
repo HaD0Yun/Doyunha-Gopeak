@@ -6,6 +6,7 @@ This folder groups design and release references for GoPeak.
 
 - [architecture.md](./architecture.md): platform boundaries, transport split, verification rules.
 - [platform-roadmap.md](./platform-roadmap.md): phased platform roadmap and acceptance criteria.
+- [migration-policy.md](./migration-policy.md): profile, alias, hide/remove/rename, and docs-claim migration rules.
 
 ## Benchmark Planning
 

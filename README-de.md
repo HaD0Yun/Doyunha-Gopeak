@@ -25,7 +25,7 @@ gopeak
 ```
 
 ## Kurzüberblick
-- 33 Kern-Tools + 22 dynamische Tool-Gruppen bei Bedarf
+- Vertrauenswürdige Kern-Tools + dynamische Tool-Gruppen bei Bedarf
 - Unterstützt Szenen, Skripte, Ressourcen, Runtime-Inspektion, LSP, DAP und Input-Automation
 - Für KI-Workflows, die auf echtem Godot-Projektzustand basieren
 
