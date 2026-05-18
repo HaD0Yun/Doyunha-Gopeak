@@ -330,13 +330,17 @@ func _cmd_inject_action(params: Dictionary) -> Dictionary:
 
 
 func _cmd_inject_key(params: Dictionary) -> Dictionary:
-	var keycode = int(params.get("keycode", 0))
+	var keycode_raw: Variant = params.get("keycode", 0)
 	var pressed = bool(params.get("pressed", true))
 	var key_label = String(params.get("key_label", ""))
-	
+
+	if keycode_raw is String and not (keycode_raw as String).is_empty() and key_label.is_empty():
+		key_label = keycode_raw as String
+	var keycode: int = 0 if keycode_raw is String else int(keycode_raw)
+
 	var event = InputEventKey.new()
 	event.pressed = pressed
-	
+
 	if not key_label.is_empty():
 		event.keycode = OS.find_keycode_from_string(key_label)
 		if event.keycode == KEY_NONE:
@@ -357,19 +361,22 @@ func _cmd_inject_key(params: Dictionary) -> Dictionary:
 
 
 func _cmd_inject_mouse_click(params: Dictionary) -> Dictionary:
-	var position = params.get("position", Vector2.ZERO)
-	var button = int(params.get("button", MOUSE_BUTTON_LEFT))
-	var pressed = bool(params.get("pressed", true))
-	
-	if position is Array:
-		if position.size() < 2:
-			return {"type": "error", "message": "position array must contain [x, y]"}
-		position = Vector2(float(position[0]), float(position[1]))
-	elif position is Vector2:
-		position = position
+	var position: Vector2
+	if params.has("x") and params.has("y"):
+		position = Vector2(float(params["x"]), float(params["y"]))
 	else:
-		return {"type": "error", "message": "position must be Vector2 or [x, y]"}
-	
+		var pos_raw = params.get("position", Vector2.ZERO)
+		if pos_raw is Array:
+			if pos_raw.size() < 2:
+				return {"type": "error", "message": "position array must contain [x, y]"}
+			position = Vector2(float(pos_raw[0]), float(pos_raw[1]))
+		elif pos_raw is Vector2:
+			position = pos_raw
+		else:
+			return {"type": "error", "message": "position must be Vector2 or [x, y]"}
+	var button: int = _resolve_mouse_button(params.get("button", MOUSE_BUTTON_LEFT))
+	var pressed = bool(params.get("pressed", true))
+
 	var event = InputEventMouseButton.new()
 	event.position = position
 	event.global_position = position
@@ -387,24 +394,29 @@ func _cmd_inject_mouse_click(params: Dictionary) -> Dictionary:
 
 
 func _cmd_inject_mouse_motion(params: Dictionary) -> Dictionary:
-	var position = params.get("position", Vector2.ZERO)
-	var relative = params.get("relative", Vector2.ZERO)
-	
-	if position is Array:
-		if position.size() < 2:
-			return {"type": "error", "message": "position array must contain [x, y]"}
-		position = Vector2(float(position[0]), float(position[1]))
-	elif position is Vector2:
-		position = position
+	var position: Vector2
+	if params.has("x") and params.has("y"):
+		position = Vector2(float(params["x"]), float(params["y"]))
 	else:
-		return {"type": "error", "message": "position must be Vector2 or [x, y]"}
-	
-	if relative is Array:
-		if relative.size() < 2:
+		var pos_raw = params.get("position", Vector2.ZERO)
+		if pos_raw is Array:
+			if pos_raw.size() < 2:
+				return {"type": "error", "message": "position array must contain [x, y]"}
+			position = Vector2(float(pos_raw[0]), float(pos_raw[1]))
+		elif pos_raw is Vector2:
+			position = pos_raw
+		else:
+			return {"type": "error", "message": "position must be Vector2 or [x, y]"}
+	var rel_raw = params.get("relative", Vector2.ZERO)
+	var relative: Vector2
+	if params.has("relativeX") and params.has("relativeY"):
+		relative = Vector2(float(params["relativeX"]), float(params["relativeY"]))
+	elif rel_raw is Array:
+		if rel_raw.size() < 2:
 			return {"type": "error", "message": "relative array must contain [x, y]"}
-		relative = Vector2(float(relative[0]), float(relative[1]))
-	elif relative is Vector2:
-		relative = relative
+		relative = Vector2(float(rel_raw[0]), float(rel_raw[1]))
+	elif rel_raw is Vector2:
+		relative = rel_raw
 	else:
 		return {"type": "error", "message": "relative must be Vector2 or [x, y]"}
 	
@@ -591,6 +603,18 @@ func _deserialize_value(value) -> Variant:
 		return arr
 	else:
 		return value
+
+
+func _resolve_mouse_button(raw: Variant) -> int:
+	if raw is String:
+		match (raw as String).to_lower():
+			"left": return MOUSE_BUTTON_LEFT
+			"right": return MOUSE_BUTTON_RIGHT
+			"middle": return MOUSE_BUTTON_MIDDLE
+			"wheel_up", "wheelup": return MOUSE_BUTTON_WHEEL_UP
+			"wheel_down", "wheeldown": return MOUSE_BUTTON_WHEEL_DOWN
+			_: return MOUSE_BUTTON_LEFT
+	return int(raw)
 
 
 func _send_response(client: StreamPeerTCP, data: Dictionary) -> void:

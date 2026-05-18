@@ -220,6 +220,26 @@ async function main() {
     /client\.poll\(\)\s*\n\s*if client\.get_status\(\) != StreamPeerTCP\.STATUS_CONNECTED:\s*\n\s*clients_to_remove\.append\(client\)\s*\n\s*continue\s*\n\s*var available = client\.get_available_bytes\(\)/m,
     'runtime autoload should re-check socket status after poll() before get_available_bytes()',
   );
+  assert.match(
+    RUNTIME_SOURCE,
+    /if params\.has\("x"\) and params\.has\("y"\):\s*\n\s*position = Vector2\(float\(params\["x"\]\), float\(params\["y"\]\)\)/m,
+    'runtime input injection should accept flat x/y coordinates from the MCP tool schema',
+  );
+  assert.match(
+    RUNTIME_SOURCE,
+    /if params\.has\("relativeX"\) and params\.has\("relativeY"\):\s*\n\s*relative = Vector2\(float\(params\["relativeX"\]\), float\(params\["relativeY"\]\)\)/m,
+    'runtime mouse motion should accept flat relativeX/relativeY coordinates from the MCP tool schema',
+  );
+  assert.match(
+    RUNTIME_SOURCE,
+    /func _resolve_mouse_button\(raw: Variant\) -> int:/,
+    'runtime mouse injection should resolve string button names before assigning button_index',
+  );
+  assert.match(
+    RUNTIME_SOURCE,
+    /if keycode_raw is String and not \(keycode_raw as String\)\.is_empty\(\) and key_label\.is_empty\(\):\s*\n\s*key_label = keycode_raw as String/m,
+    'runtime key injection should treat string keycode values as key labels',
+  );
 
   await testEditorStatusPortConflict();
   console.log('regression tests passed');
