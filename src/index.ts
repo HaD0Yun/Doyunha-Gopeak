@@ -2036,7 +2036,7 @@ class GodotServer {
         this.activeProcess.process.kill();
       }
 
-      const cmdArgs = ['-d', '--path', args.projectPath];
+      const cmdArgs = ['--headless', '-d', '--path', args.projectPath];
       if (args.scene && this.validatePath(args.scene)) {
         this.logDebug(`Adding scene parameter: ${args.scene}`);
         cmdArgs.push(args.scene);
