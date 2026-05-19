@@ -543,11 +543,21 @@ class GodotServer {
     const params = (args && typeof args === 'object') ? args as Record<string, unknown> : {};
     const RUNTIME_PORT = 7777;
     const RUNTIME_HOST = '127.0.0.1';
-    const TIMEOUT_MS = 10000;
+    const timeoutOverride = Number.parseInt(process.env.GOPEAK_RUNTIME_TIMEOUT_MS || '', 10);
+    const TIMEOUT_MS = Number.isInteger(timeoutOverride) && timeoutOverride > 0 ? timeoutOverride : 10000;
+    const expectsScreenshot = command === 'capture_screenshot' || command === 'capture_viewport';
+    const screenshotDir = expectsScreenshot ? mkdtempSync(join(tmpdir(), 'gopeak-runtime-screenshot-')) : null;
+    const screenshotPath = screenshotDir ? join(screenshotDir, 'capture.png') : null;
+    const runtimeParams = screenshotPath ? { ...params, output_path: screenshotPath } : params;
+    const cleanupScreenshotDir = () => {
+      if (screenshotDir) {
+        rmSync(screenshotDir, { recursive: true, force: true });
+      }
+    };
 
     return new Promise((resolve) => {
       const socket = createTcpConnection({ port: RUNTIME_PORT, host: RUNTIME_HOST }, () => {
-        const payload = JSON.stringify({ command, params, id: Date.now() });
+        const payload = JSON.stringify({ command, params: runtimeParams, id: Date.now() });
         socket.write(payload + '\n');
       });
 
@@ -559,6 +569,7 @@ class GodotServer {
         }
         resolved = true;
         socket.destroy();
+        cleanupScreenshotDir();
         resolve({
           content: [{ type: 'text', text: `Runtime command '${command}' timed out after ${TIMEOUT_MS}ms. Ensure the Godot game is running with the MCP runtime addon enabled.` }],
         });
@@ -572,7 +583,36 @@ class GodotServer {
         clearTimeout(timer);
         socket.destroy();
 
+        if (parsed.type === 'screenshot_file' && parsed.path) {
+          const returnedPath = String(parsed.path);
+          if (!screenshotPath || normalize(returnedPath) !== normalize(screenshotPath)) {
+            cleanupScreenshotDir();
+            resolve({
+              content: [{ type: 'text', text: `Rejected screenshot file path outside the GoPeak-managed capture path: '${returnedPath}'` }],
+            });
+            return;
+          }
+          try {
+            const imageData = readFileSync(screenshotPath).toString('base64');
+            cleanupScreenshotDir();
+            resolve({
+              content: [
+                { type: 'text', text: `Screenshot captured: ${parsed.width}x${parsed.height} ${parsed.format}` },
+                { type: 'image', data: imageData, mimeType: 'image/png' },
+              ],
+            });
+          } catch (error) {
+            cleanupScreenshotDir();
+            const message = error instanceof Error ? error.message : String(error);
+            resolve({
+              content: [{ type: 'text', text: `Failed to read screenshot file '${screenshotPath}': ${message}` }],
+            });
+          }
+          return;
+        }
+
         if (parsed.type === 'screenshot' && parsed.data) {
+          cleanupScreenshotDir();
           resolve({
             content: [
               { type: 'text', text: `Screenshot captured: ${parsed.width}x${parsed.height} ${parsed.format}` },
@@ -582,6 +622,7 @@ class GodotServer {
           return;
         }
 
+        cleanupScreenshotDir();
         resolve({
           content: [{ type: 'text', text: JSON.stringify(parsed, null, 2) }],
         });
@@ -629,7 +670,8 @@ class GodotServer {
         }
 
         if (parsedMessages.length > 0) {
-          const candidate = parsedMessages.find((message) => message?.type === 'screenshot' && message?.data)
+          const candidate = parsedMessages.find((message) => message?.type === 'screenshot_file' && message?.path)
+            ?? parsedMessages.find((message) => message?.type === 'screenshot' && message?.data)
             ?? parsedMessages.find((message) => message?.type === 'pong')
             ?? parsedMessages.find((message) => message?.type && message.type !== 'welcome')
             ?? null;
@@ -648,6 +690,7 @@ class GodotServer {
         clearTimeout(timer);
         const responseData = responseBuffer.toString('utf8').trim();
         resolved = true;
+        cleanupScreenshotDir();
         try {
           const parsed = JSON.parse(responseData);
           resolve({
@@ -666,6 +709,7 @@ class GodotServer {
         }
         resolved = true;
         clearTimeout(timer);
+        cleanupScreenshotDir();
         resolve({
           content: [{ type: 'text', text: `Failed to connect to Godot runtime addon at ${RUNTIME_HOST}:${RUNTIME_PORT}: ${error.message}. Ensure the game is running with the MCP runtime autoload enabled.` }],
         });

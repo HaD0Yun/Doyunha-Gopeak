@@ -214,6 +214,7 @@ CLI bin names:
 | `GODOT_BRIDGE_PORT` | Bridge/Visualizer HTTP+WS port override | `6505` |
 | `GOPEAK_BRIDGE_HOST` | Bridge/Visualizer bind host | `127.0.0.1` |
 | `GOPEAK_TOOLS_PAGE_SIZE` | Number of tools per `tools/list` page | `33` |
+| `GOPEAK_RUNTIME_TIMEOUT_MS` | Runtime addon command timeout in milliseconds | `10000` |
 | `DEBUG` | Enable server debug logs | `false` |
 | `LOG_MODE` | Recording mode: `lite` or `full` | `lite` |
 
@@ -224,6 +225,8 @@ CLI bin names:
 | `6006` | Godot DAP. |
 | `7777` | Runtime addon command socket. |
 
+Runtime screenshot tools (`capture_screenshot`, `capture_viewport`) use a GoPeak-managed temporary PNG file when the runtime addon supports `output_path`, then return normal MCP image content. Older runtime addons that do not receive an `output_path` continue to return inline base64 screenshots.
+
 ---
 
 ## Troubleshooting
@@ -233,6 +236,7 @@ CLI bin names:
 - **Need a hidden tool** → search with `tool.catalog` or activate a group with `tool.groups`.
 - **Project path invalid** → confirm `project.godot` exists.
 - **Runtime tools not working** → install/enable the runtime addon and check port `7777`.
+- **Runtime screenshots time out** → update the runtime addon so screenshot commands support the managed `output_path` flow. For slow runtime responses, raise `GOPEAK_RUNTIME_TIMEOUT_MS`; older addons may still time out on large inline base64 screenshots.
 - **Editor bridge disconnected** → stop duplicate `gopeak`/MCP servers that may already own bridge port `6505`; `get_editor_status` reports bridge startup errors such as `EADDRINUSE`.
 
 ---

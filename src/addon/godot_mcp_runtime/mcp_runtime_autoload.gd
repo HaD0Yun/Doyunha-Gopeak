@@ -270,7 +270,23 @@ func _cmd_capture_screenshot(params: Dictionary) -> Dictionary:
 	var viewport = get_viewport()
 	if viewport == null:
 		return {"type": "error", "message": "No viewport available"}
+	return _capture_viewport_image(viewport, params)
+
+
+func _cmd_capture_viewport(params: Dictionary) -> Dictionary:
+	var viewport_path = String(params.get("viewportPath", params.get("viewport_path", "")))
+	if viewport_path.is_empty():
+		return _cmd_capture_screenshot(params)
 	
+	var node = get_tree().root.get_node_or_null(viewport_path)
+	if node == null:
+		return {"type": "error", "message": "Viewport not found: " + viewport_path}
+	if not node is Viewport:
+		return {"type": "error", "message": "Node is not a Viewport: " + viewport_path}
+	return _capture_viewport_image(node as Viewport, params)
+
+
+func _capture_viewport_image(viewport: Viewport, params: Dictionary) -> Dictionary:
 	var viewport_texture = viewport.get_texture()
 	if viewport_texture == null:
 		return {"type": "error", "message": "No viewport texture available"}
@@ -284,24 +300,36 @@ func _cmd_capture_screenshot(params: Dictionary) -> Dictionary:
 	if width > 0 and height > 0:
 		image.resize(width, height)
 	
-	var png_bytes = image.save_png_to_buffer()
-	if png_bytes.is_empty():
-		return {"type": "error", "message": "Failed to encode screenshot as PNG"}
-	
-	var base64_str = Marshalls.raw_to_base64(png_bytes)
+	var requested_path = String(params.get("output_path", params.get("outputPath", "")))
+	if requested_path.is_empty():
+		var png_bytes = image.save_png_to_buffer()
+		if png_bytes.is_empty():
+			return {"type": "error", "message": "Failed to encode screenshot as PNG"}
+
+		return {
+			"type": "screenshot",
+			"format": "png",
+			"encoding": "base64",
+			"width": image.get_width(),
+			"height": image.get_height(),
+			"data": Marshalls.raw_to_base64(png_bytes)
+		}
+
+	var screenshot_path = requested_path
+	if screenshot_path.begins_with("user://") or screenshot_path.begins_with("res://"):
+		screenshot_path = ProjectSettings.globalize_path(screenshot_path)
+	var save_error = image.save_png(screenshot_path)
+	if save_error != OK:
+		return {"type": "error", "message": "Failed to save screenshot as PNG: " + str(save_error)}
 	
 	return {
-		"type": "screenshot",
+		"type": "screenshot_file",
 		"format": "png",
-		"encoding": "base64",
+		"encoding": "file",
 		"width": image.get_width(),
 		"height": image.get_height(),
-		"data": base64_str
+		"path": screenshot_path
 	}
-
-
-func _cmd_capture_viewport(params: Dictionary) -> Dictionary:
-	return _cmd_capture_screenshot(params)
 
 
 func _cmd_inject_action(params: Dictionary) -> Dictionary:

@@ -5,6 +5,7 @@
  */
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
+import { writeFileSync } from 'node:fs';
 import { WebSocket } from 'ws';
 import { setTimeout as delay } from 'node:timers/promises';
 import process from 'node:process';
@@ -22,6 +23,7 @@ const GODOT_PATH = process.env.GODOT_PATH || '/home/doyun/Apps/godot-4.6-rc2/God
 const TEST_PROJECT = process.env.GOPEAK_TEST_PROJECT || '/home/doyun/gopeak-smoke-test';
 const RUNTIME_PORT = 7777;
 const OPENAI_COMPATIBLE_TOOL_NAME_PATTERN = /^[a-zA-Z0-9-]{1,128}$/;
+const ONE_PIXEL_PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7Z0r0AAAAASUVORK5CYII=';
 
 let passed = 0;
 let failed = 0;
@@ -472,11 +474,22 @@ async function main() {
               object_node_count: 42,
             },
           })}\n`);
-        } else if (request.command === 'capture_screenshot' || request.command === 'capture_viewport') {
+        } else if (request.command === 'capture_screenshot') {
           socket.write(`${JSON.stringify({
             type: 'screenshot',
             id: request.id,
-            data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7Z0r0AAAAASUVORK5CYII=',
+            data: ONE_PIXEL_PNG_BASE64,
+            width: 1,
+            height: 1,
+            format: 'png',
+          })}\n`);
+        } else if (request.command === 'capture_viewport') {
+          const screenshotPath = request.params?.output_path || request.params?.outputPath;
+          writeFileSync(screenshotPath, Buffer.from(ONE_PIXEL_PNG_BASE64, 'base64'));
+          socket.write(`${JSON.stringify({
+            type: 'screenshot_file',
+            id: request.id,
+            path: screenshotPath,
             width: 1,
             height: 1,
             format: 'png',
