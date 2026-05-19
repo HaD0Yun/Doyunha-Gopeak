@@ -1,0 +1,8 @@
+; Engine configuration file.
+; Minimal fixture for GoPeak benchmark regression tests.
+
+config_version=5
+
+[application]
+config/name="GoPeak Benchmark Fixture"
+config/features=PackedStringArray("4.0")
