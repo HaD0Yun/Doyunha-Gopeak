@@ -5,8 +5,10 @@
  */
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
-import { writeFileSync } from 'node:fs';
+import { accessSync, constants, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { WebSocket } from 'ws';
+import { tmpdir } from 'node:os';
+import { delimiter, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import process from 'node:process';
 import { sanitizeToolName } from './test-support/tool-name.mjs';
@@ -18,9 +20,11 @@ const parsedBridgePort = Number.parseInt(bridgePortRaw || '', 10);
 const BRIDGE_PORT = Number.isInteger(parsedBridgePort) && parsedBridgePort >= 1 && parsedBridgePort <= 65535
   ? parsedBridgePort
   : null;
-const BRIDGE_HOST = process.env.GOPEAK_BRIDGE_HOST || process.env.GODOT_BRIDGE_HOST || '127.0.0.1';
-const GODOT_PATH = process.env.GODOT_PATH || '/home/doyun/Apps/godot-4.6-rc2/Godot_v4.6-rc2_linux.x86_64';
-const TEST_PROJECT = process.env.GOPEAK_TEST_PROJECT || '/home/doyun/gopeak-smoke-test';
+const BRIDGE_HOST = process.env.GODOT_BRIDGE_HOST || process.env.MCP_BRIDGE_HOST || process.env.GOPEAK_BRIDGE_HOST || '127.0.0.1';
+const GODOT_PATH = resolveGodotPath(process.env.GODOT_PATH);
+const TEST_PROJECT_FROM_ENV = process.env.GOPEAK_TEST_PROJECT || '';
+const HAS_USABLE_GODOT = Boolean(GODOT_PATH && isExecutableFile(GODOT_PATH));
+const TOOL_PROFILE = resolveToolProfile(process.env.GOPEAK_TOOL_PROFILE || process.env.MCP_TOOL_PROFILE);
 const RUNTIME_PORT = 7777;
 const OPENAI_COMPATIBLE_TOOL_NAME_PATTERN = /^[a-zA-Z0-9-]{1,128}$/;
 const ONE_PIXEL_PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7Z0r0AAAAASUVORK5CYII=';
@@ -54,6 +58,62 @@ function chooseTool(toolNames, preferred) {
     }
   }
   return preferred.find(Boolean);
+}
+function isExecutableFile(filePath) {
+  try {
+    accessSync(filePath, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function resolveGodotPath(explicitPath) {
+  if (explicitPath) {
+    if (isExecutableFile(explicitPath)) {
+      return explicitPath;
+    }
+    if (!explicitPath.includes('/') && !explicitPath.includes('\\')) {
+      return findExecutableInPath([explicitPath]) || explicitPath;
+    }
+    return explicitPath;
+  }
+  return findExecutableInPath(['godot', 'godot4', 'Godot']);
+}
+function resolveToolProfile(rawProfile) {
+  const normalizedProfile = (rawProfile || 'compact').toLowerCase();
+  return ['full', 'legacy', 'compact'].includes(normalizedProfile) ? normalizedProfile : 'compact';
+}
+
+function findExecutableInPath(names) {
+  const pathEntries = (process.env.PATH || '').split(delimiter).filter(Boolean);
+  for (const name of names) {
+    for (const pathEntry of pathEntries) {
+      const candidate = join(pathEntry, name);
+      if (isExecutableFile(candidate)) {
+        return candidate;
+      }
+    }
+  }
+  return '';
+}
+
+function createTestProjectFixture() {
+  const projectPath = mkdtempSync(join(tmpdir(), 'gopeak-test-project-'));
+  writeFileSync(join(projectPath, 'project.godot'), [
+    '; Engine configuration file.',
+    '',
+    '[application]',
+    'config/name="Gopeak Bridge Test"',
+    '',
+  ].join('\n'));
+  writeFileSync(join(projectPath, 'player.gd'), [
+    'extends CharacterBody2D',
+    '',
+    'func _ready():',
+    '    pass',
+    '',
+  ].join('\n'));
+  return projectPath;
 }
 
 async function reserveBridgePort() {
@@ -91,11 +151,33 @@ async function main() {
   const bridgePort = await reserveBridgePort();
   const godotWsUrl = `ws://${BRIDGE_HOST}:${bridgePort}/godot`;
   const vizWsUrl = `ws://${BRIDGE_HOST}:${bridgePort}/visualizer`;
+  const createdTestProject = TEST_PROJECT_FROM_ENV ? '' : createTestProjectFixture();
+  let cleanedTestProject = false;
+  const cleanupTestProject = () => {
+    if (!createdTestProject || cleanedTestProject) {
+      return;
+    }
+    cleanedTestProject = true;
+    rmSync(createdTestProject, { recursive: true, force: true });
+  };
+  process.once('exit', cleanupTestProject);
+  const TEST_PROJECT = TEST_PROJECT_FROM_ENV || createdTestProject;
+  const serverEnv = {
+    ...process.env,
+    DEBUG: 'true',
+    GOPEAK_TOOL_PROFILE: TOOL_PROFILE,
+    GOPEAK_BRIDGE_PORT: String(bridgePort),
+    GODOT_BRIDGE_HOST: BRIDGE_HOST,
+  };
+  if (GODOT_PATH) {
+    serverEnv.GODOT_PATH = GODOT_PATH;
+  }
+
 
   // 1. Start MCP server
   console.log('📦 Starting MCP server...');
   const server = spawn(process.execPath, [MCP_SERVER], {
-    env: { ...process.env, GODOT_PATH, DEBUG: 'true', GOPEAK_TOOL_PROFILE: 'compact', GOPEAK_BRIDGE_PORT: String(bridgePort), GOPEAK_BRIDGE_HOST: BRIDGE_HOST },
+    env: serverEnv,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
 
@@ -283,7 +365,7 @@ async function main() {
     const invalidToolNames = tools
       .map((tool) => tool?.name)
       .filter((name) => typeof name !== 'string' || !OPENAI_COMPATIBLE_TOOL_NAME_PATTERN.test(name));
-    const isCompactProfile = (process.env.GOPEAK_TOOL_PROFILE || 'compact') === 'compact';
+    const isCompactProfile = TOOL_PROFILE === 'compact';
     const hasTool = (...names) => names.filter(Boolean).some(name => toolNames.has(name));
 
     ok(`tools/list returned ${tools.length} tools across all pages`);
@@ -331,42 +413,46 @@ async function main() {
 
   // 5.5 Regression: class introspection tools should return structured MCP content
   console.log('\n🏛️ Testing ClassDB introspection tools...');
-  stdout = '';
-  server.stdin.write(rpcMsg('tools/call', {
-    name: 'query_classes',
-    arguments: {
-      projectPath: TEST_PROJECT,
-      category: 'node2d',
-      filter: 'sprite',
-      instantiableOnly: true,
+  if (HAS_USABLE_GODOT) {
+    stdout = '';
+    server.stdin.write(rpcMsg('tools/call', {
+      name: 'query_classes',
+      arguments: {
+        projectPath: TEST_PROJECT,
+        category: 'node2d',
+        filter: 'sprite',
+        instantiableOnly: true,
+      }
+    }));
+    await delay(1500);
+
+    const queryClassesResponses = parseJsonLines(stdout);
+    const queryClassesPayload = parseTextContent(queryClassesResponses.find(response => response.result?.content));
+    if (queryClassesPayload && Array.isArray(queryClassesPayload.classes)) {
+      ok(`query_classes returned structured JSON (${queryClassesPayload.classes.length} classes)`);
+    } else {
+      fail('query_classes structured response', JSON.stringify(queryClassesResponses[0] || null));
     }
-  }));
-  await delay(1500);
 
-  const queryClassesResponses = parseJsonLines(stdout);
-  const queryClassesPayload = parseTextContent(queryClassesResponses.find(response => response.result?.content));
-  if (queryClassesPayload && Array.isArray(queryClassesPayload.classes)) {
-    ok(`query_classes returned structured JSON (${queryClassesPayload.classes.length} classes)`);
-  } else {
-    fail('query_classes structured response', JSON.stringify(queryClassesResponses[0] || null));
-  }
+    stdout = '';
+    server.stdin.write(rpcMsg('tools/call', {
+      name: 'query_class_info',
+      arguments: {
+        projectPath: TEST_PROJECT,
+        className: 'Node2D',
+      }
+    }));
+    await delay(1500);
 
-  stdout = '';
-  server.stdin.write(rpcMsg('tools/call', {
-    name: 'query_class_info',
-    arguments: {
-      projectPath: TEST_PROJECT,
-      className: 'Node2D',
+    const queryClassInfoResponses = parseJsonLines(stdout);
+    const queryClassInfoPayload = parseTextContent(queryClassInfoResponses.find(response => response.result?.content));
+    if (queryClassInfoPayload && queryClassInfoPayload.class_name === 'Node2D' && Array.isArray(queryClassInfoPayload.methods)) {
+      ok(`query_class_info returned structured JSON (${queryClassInfoPayload.methods.length} methods)`);
+    } else {
+      fail('query_class_info structured response', JSON.stringify(queryClassInfoResponses[0] || null));
     }
-  }));
-  await delay(1500);
-
-  const queryClassInfoResponses = parseJsonLines(stdout);
-  const queryClassInfoPayload = parseTextContent(queryClassInfoResponses.find(response => response.result?.content));
-  if (queryClassInfoPayload && queryClassInfoPayload.class_name === 'Node2D' && Array.isArray(queryClassInfoPayload.methods)) {
-    ok(`query_class_info returned structured JSON (${queryClassInfoPayload.methods.length} methods)`);
   } else {
-    fail('query_class_info structured response', JSON.stringify(queryClassInfoResponses[0] || null));
+    ok('ClassDB introspection checks skipped (no executable Godot found)');
   }
 
   stdout = '';
@@ -869,6 +955,7 @@ async function main() {
   server.stdin.end();
   server.kill('SIGTERM');
   await delay(1000);
+  cleanupTestProject();
 
   // Summary
   console.log('\n' + '='.repeat(50));

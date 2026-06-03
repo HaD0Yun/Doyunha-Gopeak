@@ -6341,6 +6341,103 @@ class GodotServer {
   // Project Search Handlers
   // ============================================
 
+  private searchProjectNatively(
+    projectPath: string,
+    query: string,
+    fileTypes: string[],
+    useRegex: boolean,
+    caseSensitive: boolean,
+    maxResults: number
+  ): Record<string, unknown> {
+    const normalizedExtensions = new Set(
+      fileTypes.map((ext) => ext.replace(/^\./, '').toLowerCase()).filter(Boolean)
+    );
+    const result = {
+      query,
+      results: [] as Array<{ file: string; matches: Array<{ line: number; content: string; match: string }> }>,
+      summary: {
+        files_searched: 0,
+        files_with_matches: 0,
+        total_matches: 0,
+        truncated: false,
+      },
+    };
+
+    const regex = useRegex ? new RegExp(query, caseSensitive ? '' : 'i') : null;
+    const queryToCheck = caseSensitive ? query : query.toLowerCase();
+
+    const visit = (dirPath: string) => {
+      if (result.summary.total_matches >= maxResults) {
+        result.summary.truncated = true;
+        return;
+      }
+
+      for (const entry of readdirSync(dirPath, { withFileTypes: true })) {
+        if (result.summary.total_matches >= maxResults) {
+          result.summary.truncated = true;
+          return;
+        }
+
+        if (entry.name === '.git' || entry.name === 'node_modules' || entry.name === '.godot') {
+          continue;
+        }
+
+        const entryPath = join(dirPath, entry.name);
+        if (entry.isDirectory()) {
+          visit(entryPath);
+          continue;
+        }
+
+        if (!entry.isFile()) {
+          continue;
+        }
+
+        const extension = entry.name.includes('.') ? entry.name.split('.').pop()?.toLowerCase() || '' : '';
+        if (!normalizedExtensions.has(extension)) {
+          continue;
+        }
+
+        result.summary.files_searched += 1;
+        const content = readFileSync(entryPath, 'utf8');
+        const lines = content.split('\n');
+        const matches: Array<{ line: number; content: string; match: string }> = [];
+
+        for (let index = 0; index < lines.length; index += 1) {
+          if (result.summary.total_matches >= maxResults) {
+            result.summary.truncated = true;
+            break;
+          }
+
+          const line = lines[index];
+          const match = regex
+            ? regex.exec(line)?.[0]
+            : ((caseSensitive ? line : line.toLowerCase()).includes(queryToCheck) ? query : '');
+
+          if (match) {
+            matches.push({
+              line: index + 1,
+              content: line.trim(),
+              match,
+            });
+            result.summary.total_matches += 1;
+          }
+        }
+
+        if (matches.length > 0) {
+          const relativePath = entryPath.slice(projectPath.length + 1).replace(/\\/g, '/');
+          result.results.push({
+            file: `res://${relativePath}`,
+            matches,
+          });
+          result.summary.files_with_matches += 1;
+        }
+      }
+    };
+
+    visit(projectPath);
+    return result;
+  }
+
   /**
    * Handle the search_project tool
    */
@@ -6377,18 +6474,17 @@ class GodotServer {
         caseSensitive: args.caseSensitive || false,
         maxResults: args.maxResults || 100,
       };
-
-      const { stdout, stderr } = await this.executeOperation('search_project', params, args.projectPath);
-
-      if (stderr && stderr.includes('ERROR')) {
-        return this.createErrorResponse(
-          `Failed to search project: ${stderr}`,
-          ['Check if the query/regex pattern is valid']
-        );
-      }
+      const result = this.searchProjectNatively(
+        args.projectPath,
+        params.query,
+        params.fileTypes,
+        params.regex,
+        params.caseSensitive,
+        params.maxResults
+      );
 
       return {
-        content: [{ type: 'text', text: this.extractLastJsonLine(stdout) || stdout.trim() }],
+        content: [{ type: 'text', text: JSON.stringify(result) }],
       };
     } catch (error: any) {
       return this.createErrorResponse(
