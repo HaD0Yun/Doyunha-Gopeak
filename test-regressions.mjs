@@ -11,6 +11,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { createBridge } from './build/godot-bridge.js';
 
 const INDEX_SOURCE = readFileSync(new URL('./src/index.ts', import.meta.url), 'utf8');
+const CLI_NOTIFY_SOURCE = readFileSync(new URL('./src/cli/notify.ts', import.meta.url), 'utf8');
 const OPERATIONS_SOURCE = readFileSync(new URL('./src/scripts/godot_operations.gd', import.meta.url), 'utf8');
 const RUNTIME_SOURCE = readFileSync(new URL('./src/addon/godot_mcp_runtime/mcp_runtime_autoload.gd', import.meta.url), 'utf8');
 
@@ -214,6 +215,16 @@ async function main() {
   testSceneToolsVectorRegression();
   assert.match(INDEX_SOURCE, /key\.startsWith\('_'\)/, 'index.ts should preserve sentinel keys like _type during parameter normalization');
   assert.match(INDEX_SOURCE, /@file:/, 'index.ts should pass operation params via @file: temp payloads');
+  assert.match(
+    INDEX_SOURCE,
+    /private async handleRunProject[\s\S]*?const cmdArgs = \[[^\]]*'--headless'[^\]]*'-d'[^\]]*'--path'[^\]]*args\.projectPath[^\]]*\]/,
+    'run_project should launch Godot with --headless in handleRunProject cmdArgs',
+  );
+  assert.match(
+    CLI_NOTIFY_SOURCE,
+    /const wantsStar = await askYesNo\('[^']*Star GoPeak on GitHub\? \(y\/n\): '\);\s*\n\s*if \(wantsStar\) \{\s*\n\s*await handleStar\(\);/m,
+    'star prompt should call handleStar only when the user accepts',
+  );
   assert.match(OPERATIONS_SOURCE, /params_json\.begins_with\("@file:"\)/, 'godot_operations.gd should load params from @file: payloads');
   assert.match(
     RUNTIME_SOURCE,
