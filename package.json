@@ -43,7 +43,6 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "axios": "^1.13.6",
     "fs-extra": "^11.2.0",
     "ws": "^8.18.0"
   },
