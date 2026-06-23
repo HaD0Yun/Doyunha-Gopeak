@@ -227,6 +227,21 @@ async function main() {
   );
   assert.match(OPERATIONS_SOURCE, /params_json\.begins_with\("@file:"\)/, 'godot_operations.gd should load params from @file: payloads');
   assert.match(
+    INDEX_SOURCE,
+    /export function scanDirectoryForGodotBinaries/,
+    'index.ts should export scanDirectoryForGodotBinaries for versioned-binary detection',
+  );
+  assert.match(
+    INDEX_SOURCE,
+    /Godot_v4\.4\.1-stable_win64\.exe/,
+    'index.ts detection scanner doc should reference versioned Windows binaries from Issue #67',
+  );
+  assert.match(
+    INDEX_SOURCE,
+    /scanDirectoryForGodotBinaries\(dir, osPlatform\)/,
+    'detectGodotPath should call the versioned-binary scanner as a fallback before giving up',
+  );
+  assert.match(
     RUNTIME_SOURCE,
     /client\.poll\(\)\s*\n\s*if client\.get_status\(\) != StreamPeerTCP\.STATUS_CONNECTED:\s*\n\s*clients_to_remove\.append\(client\)\s*\n\s*continue\s*\n\s*var available = client\.get_available_bytes\(\)/m,
     'runtime autoload should re-check socket status after poll() before get_available_bytes()',

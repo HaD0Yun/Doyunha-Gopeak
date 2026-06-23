@@ -8,8 +8,8 @@
  */
 
 import { fileURLToPath } from 'url';
-import { join, dirname, basename, normalize } from 'path';
-import { existsSync, readdirSync, mkdirSync, readFileSync, appendFileSync, writeFileSync, mkdtempSync, rmSync } from 'fs';
+import { join, dirname, basename, normalize, resolve } from 'path';
+import { existsSync, readdirSync, mkdirSync, readFileSync, appendFileSync, writeFileSync, mkdtempSync, rmSync, statSync } from 'fs';
 import { tmpdir } from 'os';
 import { spawn } from 'child_process';
 import { createConnection as createTcpConnection } from 'node:net';
@@ -41,6 +41,56 @@ import { DEBUG_MODE, GODOT_DEBUG_MODE_DEFAULT, SERVER_VERSION } from './server-v
 import type { GodotProcess, GodotServerConfig, MCPToolDefinition, OperationParams } from './server-types.js';
 
 const execAsync = promisify(exec);
+
+/**
+ * Scan a directory for Godot executable binaries.
+ *
+ * Godot release downloads use versioned filenames such as
+ * `Godot_v4.4.1-stable_win64.exe` or `Godot_v4.3-stable_linux.x86_64`,
+ * which the hard-coded candidate list cannot match. This helper globs a
+ * single install directory for any `Godot*.exe` / `godot*` binary and
+ * returns candidates sorted newest-first by modification time so the
+ * auto-detection picks the most recently installed build.
+ *
+ * Exported for unit testing.
+ * @param directory Directory to scan
+ * @param platform Current OS platform (controls the executable pattern)
+ * @returns Array of absolute candidate paths, newest first
+ */
+export function scanDirectoryForGodotBinaries(directory: string, platform: NodeJS.Platform = process.platform): string[] {
+  if (!directory || !existsSync(directory)) {
+    return [];
+  }
+
+  let entries: string[];
+  try {
+    entries = readdirSync(directory);
+  } catch {
+    return [];
+  }
+
+  const pattern = platform === 'win32' ? /^godot.*\.exe$/i : /^godot/i;
+
+  const matches: Array<{ name: string; mtime: number }> = [];
+  for (const name of entries) {
+    if (!pattern.test(name)) {
+      continue;
+    }
+    const fullPath = join(directory, name);
+    try {
+      const stat = statSync(fullPath);
+      if (stat.isFile()) {
+        matches.push({ name, mtime: stat.mtimeMs });
+      }
+    } catch {
+      // ignore unreadable entries
+    }
+  }
+
+  matches.sort((a, b) => b.mtime - a.mtime);
+  return matches.map((m) => join(directory, m.name));
+}
+
 
 // Derive __filename and __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -406,6 +456,45 @@ class GodotServer {
         this.godotPath = normalizedPath;
         this.logDebug(`Found Godot at: ${normalizedPath}`);
         return;
+      }
+    }
+
+    // Scan known Godot install directories for versioned binaries
+    // (e.g. Godot_v4.4.1-stable_win64.exe) that the hard-coded candidate
+    // list above cannot match. Candidates are sorted newest-first by mtime.
+    const scanDirectories: string[] = [];
+    if (osPlatform === 'win32') {
+      scanDirectories.push(
+        'C:\\Program Files\\Godot',
+        'C:\\Program Files (x86)\\Godot',
+        'C:\\Program Files\\Godot_4',
+        'C:\\Program Files (x86)\\Godot_4',
+        `${process.env.USERPROFILE}\\Godot`,
+        `${process.env.USERPROFILE}\\Downloads`,
+        `${process.env.USERPROFILE}\\Desktop`
+      );
+    } else if (osPlatform === 'darwin') {
+      scanDirectories.push('/Applications', `${process.env.HOME}/Applications`);
+    } else if (osPlatform === 'linux') {
+      scanDirectories.push(
+        '/usr/bin',
+        '/usr/local/bin',
+        '/snap/bin',
+        `${process.env.HOME}/.local/bin`,
+        `${process.env.HOME}/Downloads`,
+        `${process.env.HOME}/Desktop`
+      );
+    }
+
+    for (const dir of scanDirectories) {
+      const candidates = scanDirectoryForGodotBinaries(dir, osPlatform);
+      for (const candidate of candidates) {
+        const normalizedCandidate = normalize(candidate);
+        if (await this.isValidGodotPath(normalizedCandidate)) {
+          this.godotPath = normalizedCandidate;
+          this.logDebug(`Found versioned Godot binary at: ${normalizedCandidate}`);
+          return;
+        }
       }
     }
 
@@ -7501,10 +7590,22 @@ uniform float dissolve_amount : hint_range(0.0, 1.0) = 0.0;
   }
 }
 
-// Create and run the server
-const server = new GodotServer();
-server.run().catch((error: unknown) => {
-  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-  console.error('Failed to run server:', errorMessage);
-  process.exit(1);
-});
+// Create and run the server, but only when index.js is the entry point.
+// Importing the module (e.g. for unit tests of scanDirectoryForGodotBinaries)
+// must NOT start the MCP server.
+const isMainModule = () => {
+  try {
+    return process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+  } catch {
+    return false;
+  }
+};
+
+if (isMainModule()) {
+  const server = new GodotServer();
+  server.run().catch((error: unknown) => {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Failed to run server:', errorMessage);
+    process.exit(1);
+  });
+}
