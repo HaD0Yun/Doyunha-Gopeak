@@ -20,6 +20,13 @@ signal command_received(command: String, params: Dictionary)
 
 func _ready() -> void:
 	name = "MCPRuntime"
+	# The TCP control loop runs in _process (accept connections, poll clients, handle
+	# messages). With the default PROCESS_MODE_INHERIT that loop STOPS while the game tree
+	# is paused (get_tree().paused = true) — the runtime silently goes unreachable and the
+	# game can't even be un-paused over the socket. An introspection/debug server must stay
+	# responsive while the game is frozen, so it can inspect / capture / inject / resume a
+	# paused game; PROCESS_MODE_ALWAYS keeps _process running regardless of pause.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_start_server()
 	print("[MCP Runtime] Autoload ready, server starting on port %d" % _port)
 
