@@ -81,7 +81,7 @@ export async function setupShellHooks(args: string[] = []): Promise<void> {
   const rcFile = getShellRcFile();
   const shellName = getShellName();
 
-  const log = silent ? (..._args: any[]) => {} : console.log.bind(console);
+  const log = silent ? (..._values: readonly unknown[]) => undefined : (...values: readonly unknown[]) => console.log(...values);
 
   // Check if RC file exists
   if (!existsSync(rcFile)) {
@@ -133,7 +133,7 @@ function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function printOnboarding(log: (...args: any[]) => void = console.log): void {
+function printOnboarding(log: (...values: readonly unknown[]) => void = console.log): void {
   const version = getLocalVersion();
   log('╔══════════════════════════════════════════════════════╗');
   log(`║  🎮 GoPeak v${version} — AI-Powered Godot Development`
@@ -141,9 +141,9 @@ function printOnboarding(log: (...args: any[]) => void = console.log): void {
   log('║                                                      ║');
   log('║  110+ tools for Godot Engine via MCP                 ║');
   log('║                                                      ║');
-  log('║  📖 Docs:   https://github.com/HaD0Yun/Gopeak-godot-mcp   ║');
+  log('║  📖 Docs:   https://github.com/HaD0Yun/Doyunha-Gopeak    ║');
   log('║  ⭐ Star:   gopeak star                              ║');
-  log('║  🔄 Update: npm update -g gopeak                     ║');
+  log('║  🔄 Update: gopeak update                            ║');
   log('╚══════════════════════════════════════════════════════╝');
   log('');
 }

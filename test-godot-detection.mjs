@@ -16,7 +16,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, statSync, utimesSync } f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const { scanDirectoryForGodotBinaries } = await import('./build/index.js');
+const { scanDirectoryForGodotBinaries } = await import('./src/index.ts');
 
 function testIgnoresEmptyAndMissingDirectories() {
   assert.deepEqual(scanDirectoryForGodotBinaries(''), [], 'empty directory returns no candidates');

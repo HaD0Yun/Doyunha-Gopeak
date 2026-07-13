@@ -36,14 +36,14 @@ export async function checkForUpdates(args: string[]): Promise<void> {
 
   if (!latestVersion) {
     if (!isQuiet) {
-      console.log('⚠️  Could not reach npm registry. Check your network.');
+      console.log('⚠️  Could not reach GitHub Releases. Check your network.');
     }
     return;
   }
 
   if (compareSemver(latestVersion, currentVersion) > 0) {
     if (isQuiet) {
-      console.log(`🚀 GoPeak v${latestVersion} available! Run: npm update -g gopeak`);
+      console.log(`🚀 GoPeak v${latestVersion} available! Run: gopeak update`);
     } else {
       printUpdateBox(currentVersion, latestVersion);
     }
@@ -70,7 +70,7 @@ async function backgroundCheck(): Promise<void> {
   if (!latestVersion) return;
 
   if (compareSemver(latestVersion, currentVersion) > 0) {
-    const msg = `🚀 GoPeak v${latestVersion} available! (current: v${currentVersion})\n   Run: npm update -g gopeak`;
+    const msg = `🚀 GoPeak v${latestVersion} available! (current: v${currentVersion})\n   Run: gopeak update`;
     writeNotifyFile(msg);
   } else {
     // No update — clear stale notification if any
@@ -80,8 +80,8 @@ async function backgroundCheck(): Promise<void> {
 
 function printUpdateBox(current: string, latest: string): void {
   const line1 = `  🚀 GoPeak v${latest} available! (current: v${current})`;
-  const line2 = `  npm update -g gopeak`;
-  const line3 = `  https://github.com/HaD0Yun/Gopeak-godot-mcp/releases`;
+  const line2 = `  gopeak update`;
+  const line3 = `  https://github.com/HaD0Yun/Doyunha-Gopeak/releases`;
   const maxLen = Math.max(line1.length, line2.length, line3.length) + 2;
   const pad = (s: string) => s + ' '.repeat(Math.max(0, maxLen - s.length));
 

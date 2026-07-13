@@ -4,7 +4,7 @@
 # Installs Auto Reload, Editor Bridge, and Runtime addons to your Godot project
 #
 # Usage: Run this script in your Godot project folder
-#   curl -sL https://raw.githubusercontent.com/HaD0Yun/Gopeak-godot-mcp/main/install-addon.sh | bash
+#   curl -sL https://raw.githubusercontent.com/HaD0Yun/Doyunha-Gopeak/main/install-addon.sh | bash
 #
 
 set -e
@@ -16,7 +16,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 BOLD='\033[1m'
 
-REPO_URL="https://raw.githubusercontent.com/HaD0Yun/Gopeak-godot-mcp/main"
+REPO_URL="https://raw.githubusercontent.com/HaD0Yun/Doyunha-Gopeak/main"
 
 AUTO_RELOAD_ONLY=false
 RUNTIME_ONLY=false
@@ -225,4 +225,4 @@ echo "  1. Open your project in Godot"
 echo "  2. Go to Project > Project Settings > Plugins"
 echo "  3. Enable the installed addon(s), including ${BOLD}godot_mcp_editor${NC} for bridge-backed tools"
 echo ""
-echo "For more info: https://github.com/HaD0Yun/Gopeak-godot-mcp"
+echo "For more info: https://github.com/HaD0Yun/Doyunha-Gopeak"
