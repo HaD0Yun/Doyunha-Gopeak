@@ -56,7 +56,10 @@ jobs:
         run: bun run typecheck
 
       - name: Smoke test
-        run: bun run smoke
+        run: node scripts/smoke-test.mjs && node test-regressions.mjs && node test-godot-detection.mjs
+
+      - name: Packaging test
+        run: bun run test:packaging
 
   dynamic-groups-test:
     runs-on: ubuntu-latest
@@ -88,7 +91,7 @@ jobs:
         run: bun ci
 
       - name: Dynamic groups test
-        run: bun run test:dynamic-groups
+        run: node test-dynamic-groups.mjs
 
   audit-production-deps:
     runs-on: ubuntu-latest
