@@ -4,6 +4,12 @@ All notable changes to GoPeak (godot-mcp) will be documented in this file.
 
 ## [Unreleased]
 
+## [2.3.9] - 2026-07-13
+
+### Fixed
+- Refreshed production dependency resolutions for `ws`, `hono`, and `qs` so the production npm audit gate passes again.
+- Kept the MCP registry metadata synchronized with the package release version.
+
 ## [2.3.7] - 2026-05-14
 
 ### Changed
