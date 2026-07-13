@@ -139,13 +139,13 @@ For any change that touches MCP capabilities or transport:
 2. **Schema checks**
    - Validate input/output schema compatibility for new/changed tools/resources/prompts.
 3. **Transport checks**
-   - Confirm stdio flow remains functional (`npx -y gopeak`, inspector/manual smoke).
+   - Confirm stdio flow remains functional (`gopeak` from a Bun-installed release asset, inspector/manual smoke).
    - For bridge-related changes, verify `/health`, websocket connection, and at least one tool round-trip.
 4. **Regression checks**
    - Keep compact profile discoverability (`tool.catalog`) working.
    - Confirm legacy aliases still resolve.
 5. **Release artifact checks**
-   - `bun run build` success and package metadata consistency (`package.json`, `server.json`).
+   - `bun run build` success, bundled release tarball/checksum/attestation validation, registry-free global installation, and metadata consistency (`package.json`, `server.json`).
 
 ---
 

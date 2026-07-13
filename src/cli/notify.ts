@@ -5,7 +5,7 @@
  * Shows update prompt (y/n) and star prompt (y/n, one-time).
  */
 
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { createInterface } from 'readline';
 import {
   NOTIFY_FILE,
@@ -16,8 +16,10 @@ import {
   commandExists,
   runCommand,
 } from './utils.js';
+import { updateGoPeak } from './update.js';
 
-const REPO_URL = 'https://github.com/HaD0Yun/Gopeak-godot-mcp';
+const REPO = 'HaD0Yun/Doyunha-Gopeak';
+const REPO_URL = `https://github.com/${REPO}`;
 
 export async function showNotification(): Promise<void> {
   ensureGopeakDir();
@@ -41,16 +43,18 @@ export async function showNotification(): Promise<void> {
     const wantsUpdate = await askYesNo('  Update now? (y/n): ');
     if (wantsUpdate) {
       console.log('  Updating...');
-      const result = await runCommand('npm update -g gopeak');
-      if (result.code === 0) {
+      try {
+        await updateGoPeak();
         console.log('  ✅ Updated successfully!');
-      } else {
-        console.log('  ⚠️  Update failed. Run manually: npm update -g gopeak');
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.log(`  ⚠️  Update failed: ${message}`);
+        console.log('  Run manually: gopeak update');
       }
     }
 
     // Remove notify file (shown once)
-    try { unlinkSync(NOTIFY_FILE); } catch { /* ignore */ }
+    rmSync(NOTIFY_FILE, { force: true });
     console.log('');
   }
 
@@ -72,20 +76,20 @@ async function handleStar(): Promise<void> {
     return;
   }
 
-  const authResult = await runCommand('gh auth status');
+  const authResult = await runCommand('gh', ['auth', 'status']);
   if (authResult.code !== 0) {
     console.log(`  ℹ️  gh not authenticated. Star directly: ${REPO_URL}`);
     return;
   }
 
   // Check if already starred
-  const checkResult = await runCommand('gh api user/starred/HaD0Yun/Gopeak-godot-mcp');
+  const checkResult = await runCommand('gh', ['api', `user/starred/${REPO}`]);
   if (checkResult.code === 0) {
     console.log('  ⭐ Already starred! Thank you!');
     return;
   }
 
-  const starResult = await runCommand('gh api -X PUT user/starred/HaD0Yun/Gopeak-godot-mcp');
+  const starResult = await runCommand('gh', ['api', '-X', 'PUT', `user/starred/${REPO}`]);
   if (starResult.code === 0) {
     console.log('  ⭐ Starred! Thank you for your support!');
   } else {

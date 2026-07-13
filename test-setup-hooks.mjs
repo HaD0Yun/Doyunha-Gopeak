@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-const utils = await import('./build/cli/utils.js');
-const { setupShellHooks, MARKER_START, MARKER_END } = await import('./build/cli/setup.js');
+const utils = await import('./src/cli/utils.ts');
+const { setupShellHooks, MARKER_START, MARKER_END } = await import('./src/cli/setup.ts');
 
 assert.equal(utils.supportsShellHooks('win32', ''), false, 'Windows must not install bash/zsh hooks');
 assert.equal(utils.supportsShellHooks('linux', '/bin/bash'), true, 'bash on Unix-like systems should be supported');

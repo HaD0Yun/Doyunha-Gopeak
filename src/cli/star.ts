@@ -9,7 +9,7 @@
 import { commandExists, runCommand, STAR_PROMPTED_FILE, ensureGopeakDir } from './utils.js';
 import { existsSync, writeFileSync } from 'fs';
 
-const REPO = 'HaD0Yun/Gopeak-godot-mcp';
+const REPO = 'HaD0Yun/Doyunha-Gopeak';
 const REPO_URL = `https://github.com/${REPO}`;
 
 export async function starGoPeak(): Promise<void> {
@@ -23,7 +23,7 @@ export async function starGoPeak(): Promise<void> {
   }
 
   // 2. Check gh authentication
-  const authResult = await runCommand('gh auth status');
+  const authResult = await runCommand('gh', ['auth', 'status']);
   if (authResult.code !== 0) {
     console.log(`ℹ️  gh CLI is not authenticated.`);
     console.log(`   Please star GoPeak directly: ${REPO_URL}`);
@@ -32,7 +32,7 @@ export async function starGoPeak(): Promise<void> {
   }
 
   // 3. Check if already starred (REST: 204=starred, 404=not starred)
-  const checkResult = await runCommand(`gh api user/starred/${REPO}`);
+  const checkResult = await runCommand('gh', ['api', `user/starred/${REPO}`]);
   if (checkResult.code === 0) {
     console.log(`⭐ You've already starred GoPeak! Thank you!`);
     markStarPrompted();
@@ -40,7 +40,7 @@ export async function starGoPeak(): Promise<void> {
   }
 
   // 4. Star it (PUT user/starred/:owner/:repo)
-  const starResult = await runCommand(`gh api -X PUT user/starred/${REPO}`);
+  const starResult = await runCommand('gh', ['api', '-X', 'PUT', `user/starred/${REPO}`]);
   if (starResult.code === 0) {
     console.log(`⭐ Starred GoPeak! Thank you for your support!`);
   } else {

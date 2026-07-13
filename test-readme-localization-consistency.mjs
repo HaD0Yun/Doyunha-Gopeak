@@ -12,6 +12,9 @@ const LOCALES = [
 ];
 
 const rootReadme = fs.readFileSync(new URL(`./${ROOT_README}`, import.meta.url), 'utf8');
+const pkg = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+const escapedVersion = pkg.version.replaceAll('.', '\\.');
+const releaseAssetPattern = new RegExp(`releases/download/v?${escapedVersion}/gopeak-${escapedVersion}\\.tgz`);
 
 for (const locale of LOCALES) {
   assert.match(rootReadme, new RegExp(`\\(${locale.replace('.', '\\.')}`), `${ROOT_README} should link to ${locale}`);
@@ -25,6 +28,9 @@ for (const locale of LOCALES) {
     /Canonical docs:\s*\[README\.md\]\(README\.md\)\./,
     `${locale} should declare README.md as the canonical source`,
   );
+  assert.match(localized, releaseAssetPattern, `${locale} should install the versioned GitHub Release asset`);
+  assert.match(localized, /bun add -g "\$PWD\/gopeak-/, `${locale} should install GoPeak with Bun using an absolute tarball path`);
+  assert.doesNotMatch(localized, /\b(?:npm|npx)\b/i, `${locale} should not direct users to npm or npx`);
 }
 
 console.log('README localization consistency checks passed');

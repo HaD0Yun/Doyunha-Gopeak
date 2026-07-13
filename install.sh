@@ -1,340 +1,247 @@
-#!/bin/bash
-#
-# Godot MCP Installer for Linux/macOS
-# One-click installation script
-#
-# Usage:
-#   curl -sL https://raw.githubusercontent.com/HaD0Yun/Gopeak-godot-mcp/main/install.sh | bash
-#
-# Options:
-#   -d, --dir PATH      Installation directory (default: ~/.local/share/godot-mcp)
-#   -g, --godot PATH    Path to Godot executable
-#   -c, --configure     Show configuration for AI assistants
-#   -h, --help          Show help message
-#
+#!/usr/bin/env bash
 
-set -e
+set -euo pipefail
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
-BOLD='\033[1m'
-
-# Default values
-INSTALL_DIR="${HOME}/.local/share/godot-mcp"
+readonly REPOSITORY="HaD0Yun/Doyunha-Gopeak"
+readonly API_URL="https://api.github.com/repos/${REPOSITORY}/releases/latest"
+readonly MAX_ARCHIVE_BYTES=134217728
+readonly MAX_CHECKSUM_BYTES=4096
+VERSION=""
 GODOT_PATH=""
 SHOW_CONFIGURE=""
 
-# Parse arguments
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        -d|--dir)
-            INSTALL_DIR="$2"
-            shift 2
-            ;;
-        -g|--godot)
-            GODOT_PATH="$2"
-            shift 2
-            ;;
-        -c|--configure)
-            SHOW_CONFIGURE="$2"
-            shift 2
-            ;;
-        -h|--help)
-            echo "Godot MCP Installer"
-            echo ""
-            echo "Usage: install.sh [OPTIONS]"
-            echo ""
-            echo "Options:"
-            echo "  -d, --dir PATH        Installation directory (default: ~/.local/share/godot-mcp)"
-            echo "  -g, --godot PATH      Path to Godot executable"
-            echo "  -c, --configure NAME  Show config for: claude, cursor, cline, opencode"
-            echo "  -h, --help            Show this help message"
-            exit 0
-            ;;
-        *)
-            echo "Unknown option: $1"
-            exit 1
-            ;;
-    esac
-done
+usage() {
+  cat <<'EOF'
+GoPeak installer (Bun + GitHub Releases)
 
-# Banner
-echo -e "${CYAN}"
-echo "====================================="
-echo "     Godot MCP Installer"
-echo "     Linux / macOS"
-echo "====================================="
-echo -e "${NC}"
+Usage: install.sh [--version VERSION]
 
-# Function to print status
-print_status() {
-    echo -e "${BLUE}[*]${NC} $1"
+Options:
+  --version VERSION       Install an exact release (for example: 2.3.9)
+  -d, --dir PATH          Deprecated: accepted through 2.3.x; Bun owns the global install prefix
+  -g, --godot PATH        Deprecated: include GODOT_PATH in printed MCP configuration
+  -c, --configure CLIENT  Deprecated: print config for claude, cursor, cline, or opencode
+  -h, --help              Show this help
+
+Legacy flags are removed in GoPeak 3.0. Set BUN_INSTALL before running this
+installer if you need a custom Bun installation prefix.
+EOF
 }
 
-print_success() {
-    echo -e "${GREEN}[✓]${NC} $1"
+fail() {
+  printf 'Error: %s\n' "$1" >&2
+  exit 1
 }
 
-print_warning() {
-    echo -e "${YELLOW}[!]${NC} $1"
+deprecation() {
+  printf 'Deprecated: %s is accepted through GoPeak 2.3.x and will be removed in 3.0. %s\n' "$1" "$2" >&2
 }
 
-print_error() {
-    echo -e "${RED}[✗]${NC} $1"
-}
-
-# Check prerequisites
-check_prerequisites() {
-    print_status "Checking prerequisites..."
-    
-    # Check git
-    if ! command -v git &> /dev/null; then
-        print_error "Git is not installed. Please install git first."
-        echo "  Ubuntu/Debian: sudo apt install git"
-        echo "  Fedora: sudo dnf install git"
-        echo "  macOS: xcode-select --install"
-        exit 1
-    fi
-    print_success "Git found: $(git --version)"
-    
-    # Check Node.js
-    if ! command -v node &> /dev/null; then
-        print_error "Node.js is not installed. Please install Node.js 18+ first."
-        echo "  Visit: https://nodejs.org/en/download/"
-        echo "  Or use nvm: https://github.com/nvm-sh/nvm"
-        exit 1
-    fi
-    
-    NODE_VERSION=$(node -v | sed 's/v//' | cut -d. -f1)
-    if [ "$NODE_VERSION" -lt 18 ]; then
-        print_error "Node.js version 18+ required. Current version: $(node -v)"
-        exit 1
-    fi
-    print_success "Node.js found: $(node -v)"
-    
-    # Check npm
-    if ! command -v npm &> /dev/null; then
-        print_error "npm is not installed."
-        exit 1
-    fi
-    print_success "npm found: $(npm -v)"
-}
-
-# Detect Godot installation
-detect_godot() {
-    print_status "Detecting Godot installation..."
-    
-    if [ -n "$GODOT_PATH" ]; then
-        if [ -f "$GODOT_PATH" ]; then
-            print_success "Using specified Godot: $GODOT_PATH"
-            return
-        else
-            print_warning "Specified Godot path not found: $GODOT_PATH"
-        fi
-    fi
-    
-    # Common Godot executable names
-    GODOT_NAMES=("godot4" "godot" "godot-4" "Godot" "Godot_v4" "godot4.3" "godot4.2" "godot4.1")
-    
-    for name in "${GODOT_NAMES[@]}"; do
-        if command -v "$name" &> /dev/null; then
-            GODOT_PATH=$(command -v "$name")
-            print_success "Found Godot: $GODOT_PATH"
-            return
-        fi
+is_valid_version() {
+  local value="$1"
+  local without_build="${value%%+*}"
+  local build=""
+  if [[ "$value" == *+* ]]; then
+    build="${value#*+}"
+    [[ -n "$build" && "$build" != *..* && "$build" =~ ^[0-9A-Za-z.-]+$ ]] || return 1
+  fi
+  local core="${without_build%%-*}"
+  local prerelease=""
+  if [[ "$without_build" == *-* ]]; then
+    prerelease="${without_build#*-}"
+    [[ -n "$prerelease" ]] || return 1
+  fi
+  [[ "$core" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || return 1
+  if [[ -n "$prerelease" ]]; then
+    [[ "$prerelease" != *..* && "$prerelease" =~ ^[0-9A-Za-z.-]+$ ]] || return 1
+    local identifier
+    local old_ifs="$IFS"
+    IFS='.'
+    for identifier in $prerelease; do
+      [[ -n "$identifier" ]] || { IFS="$old_ifs"; return 1; }
+      if [[ "$identifier" =~ ^[0-9]+$ && "$identifier" != "0" && "$identifier" == 0* ]]; then
+        IFS="$old_ifs"
+        return 1
+      fi
     done
-    
-    # Check common installation paths
-    GODOT_PATHS=(
-        "/usr/bin/godot4"
-        "/usr/bin/godot"
-        "/usr/local/bin/godot4"
-        "/usr/local/bin/godot"
-        "$HOME/.local/bin/godot4"
-        "$HOME/.local/bin/godot"
-        "/opt/godot/godot"
-        "/snap/bin/godot"
-        "/Applications/Godot.app/Contents/MacOS/Godot"
-        "$HOME/Applications/Godot.app/Contents/MacOS/Godot"
-    )
-    
-    for path in "${GODOT_PATHS[@]}"; do
-        if [ -f "$path" ]; then
-            GODOT_PATH="$path"
-            print_success "Found Godot: $GODOT_PATH"
-            return
-        fi
-    done
-    
-    # Check for Godot in Downloads (common for Linux)
-    if [ -d "$HOME/Downloads" ]; then
-        FOUND=$(find "$HOME/Downloads" -maxdepth 2 -name "Godot*" -type f -executable 2>/dev/null | head -n1)
-        if [ -n "$FOUND" ]; then
-            GODOT_PATH="$FOUND"
-            print_success "Found Godot in Downloads: $GODOT_PATH"
-            return
-        fi
-    fi
-    
-    print_warning "Godot not found automatically. You'll need to set GODOT_PATH manually."
-    GODOT_PATH=""
+    IFS="$old_ifs"
+  fi
 }
 
-# Clone or update repository
-install_repository() {
-    print_status "Installing Godot MCP to: $INSTALL_DIR"
-    
-    if [ -d "$INSTALL_DIR" ]; then
-        print_status "Directory exists. Updating..."
-        cd "$INSTALL_DIR"
-        git pull origin main
-    else
-        print_status "Cloning repository..."
-        mkdir -p "$(dirname "$INSTALL_DIR")"
-        git clone https://github.com/HaD0Yun/Gopeak-godot-mcp.git "$INSTALL_DIR"
-        cd "$INSTALL_DIR"
-    fi
-    
-    print_success "Repository ready"
+curl_secure() {
+  curl -fsSL \
+    --proto '=https' \
+    --proto-redir '=https' \
+    --connect-timeout 10 \
+    --max-time 120 \
+    --retry 2 \
+    --retry-all-errors \
+    "$@"
 }
 
-# Install dependencies and build
-build_project() {
-    print_status "Installing dependencies..."
-    cd "$INSTALL_DIR"
-    npm install
-    
-    print_status "Building project..."
-    npm run build
-    
-    print_success "Build complete"
+file_size() {
+  wc -c < "$1" | tr -d '[:space:]'
 }
 
-# Show configuration for AI assistants
-show_configuration() {
-    local build_path="$INSTALL_DIR/build/index.js"
-    local godot_env=""
-    
-    if [ -n "$GODOT_PATH" ]; then
-        godot_env="\"GODOT_PATH\": \"$GODOT_PATH\""
-    else
-        godot_env="\"GODOT_PATH\": \"/path/to/godot\""
-    fi
-    
-    echo ""
-    echo -e "${CYAN}====================================="
-    echo "  Configuration for AI Assistants"
-    echo -e "=====================================${NC}"
-    echo ""
-    
-    if [ "$SHOW_CONFIGURE" = "claude" ] || [ -z "$SHOW_CONFIGURE" ]; then
-        echo -e "${BOLD}Claude Desktop${NC} (claude_desktop_config.json):"
-        echo -e "${GREEN}"
-        cat << EOF
+download_verified_release() {
+  local version="$1"
+  local archive_path="$2"
+  local checksum_path="$3"
+  local asset="gopeak-${version}.tgz"
+  local release_base="https://github.com/${REPOSITORY}/releases/download/v${version}"
+  curl_secure --max-filesize "$MAX_ARCHIVE_BYTES" -o "$archive_path" "${release_base}/${asset}" \
+    || fail "could not download ${asset}"
+  curl_secure --max-filesize "$MAX_CHECKSUM_BYTES" -o "$checksum_path" "${release_base}/${asset}.sha256" \
+    || fail "could not download ${asset}.sha256"
+  (( $(file_size "$archive_path") <= MAX_ARCHIVE_BYTES )) || fail "release archive exceeds the size limit"
+  (( $(file_size "$checksum_path") <= MAX_CHECKSUM_BYTES )) || fail "release checksum exceeds the size limit"
+
+  local expected
+  expected="$(awk 'NR == 1 { print $1 }' "$checksum_path")"
+  [[ "$expected" =~ ^[0-9a-fA-F]{64}$ ]] || fail "release checksum file is malformed"
+  local actual
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual="$(sha256sum "$archive_path" | awk '{ print $1 }')"
+  elif command -v shasum >/dev/null 2>&1; then
+    actual="$(shasum -a 256 "$archive_path" | awk '{ print $1 }')"
+  else
+    fail "SHA-256 verification requires sha256sum or shasum"
+  fi
+  [[ "$(printf '%s' "$actual" | tr '[:upper:]' '[:lower:]')" == "$(printf '%s' "$expected" | tr '[:upper:]' '[:lower:]')" ]] \
+    || fail "checksum verification failed; the existing GoPeak installation was not changed"
+}
+
+print_configuration() {
+  local client="$1"
+  local escaped_godot
+  escaped_godot="$(printf '%s' "$GODOT_PATH" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+  case "$client" in
+    claude|cline)
+      cat <<EOF
 {
   "mcpServers": {
     "godot": {
-      "command": "node",
-      "args": ["$build_path"],
-      "env": {
-        $godot_env
-      }
+      "command": "gopeak",
+      "args": [],
+      "env": { "GODOT_PATH": "${escaped_godot}" }
     }
   }
 }
 EOF
-        echo -e "${NC}"
-    fi
-    
-    if [ "$SHOW_CONFIGURE" = "cline" ] || [ -z "$SHOW_CONFIGURE" ]; then
-        echo -e "${BOLD}Cline (VS Code)${NC}:"
-        echo -e "${GREEN}"
-        cat << EOF
-{
-  "mcpServers": {
-    "godot": {
-      "command": "node",
-      "args": ["$build_path"],
-      "env": {
-        $godot_env,
-        "DEBUG": "true"
-      },
-      "disabled": false
-    }
-  }
-}
-EOF
-        echo -e "${NC}"
-    fi
-    
-    if [ "$SHOW_CONFIGURE" = "cursor" ] || [ -z "$SHOW_CONFIGURE" ]; then
-        echo -e "${BOLD}Cursor${NC}:"
-        echo "  1. Go to Cursor Settings > Features > MCP"
-        echo "  2. Click + Add New MCP Server"
-        echo "  3. Name: godot, Type: command"
-        echo -e "  4. Command: ${GREEN}node $build_path${NC}"
-        echo ""
-    fi
-    
-    if [ "$SHOW_CONFIGURE" = "opencode" ] || [ -z "$SHOW_CONFIGURE" ]; then
-        echo -e "${BOLD}OpenCode${NC} (opencode.json):"
-        echo -e "${GREEN}"
-        cat << EOF
+      ;;
+    opencode)
+      cat <<EOF
 {
   "mcp": {
     "godot": {
       "type": "local",
-      "command": ["node", "$build_path"],
-      "enabled": true,
-      "environment": {
-        $godot_env
-      }
+      "command": ["gopeak"],
+      "environment": { "GODOT_PATH": "${escaped_godot}" }
     }
   }
 }
 EOF
-        echo -e "${NC}"
-    fi
+      ;;
+    cursor)
+      printf 'Cursor MCP command: gopeak\nEnvironment: GODOT_PATH=%s\n' "$GODOT_PATH"
+      ;;
+    *)
+      fail "unsupported --configure client: $client"
+      ;;
+  esac
 }
 
-# Main installation flow
-main() {
-    check_prerequisites
-    detect_godot
-    install_repository
-    build_project
-    
-    echo ""
-    echo -e "${GREEN}====================================="
-    echo "  Installation Complete!"
-    echo -e "=====================================${NC}"
-    echo ""
-    echo -e "Installation directory: ${BOLD}$INSTALL_DIR${NC}"
-    echo -e "Build output: ${BOLD}$INSTALL_DIR/build/index.js${NC}"
-    
-    if [ -n "$GODOT_PATH" ]; then
-        echo -e "Godot executable: ${BOLD}$GODOT_PATH${NC}"
-    else
-        echo -e "${YELLOW}Godot not found. Set GODOT_PATH in your AI assistant config.${NC}"
-    fi
-    
-    show_configuration
-    
-    echo ""
-    echo -e "${CYAN}Next steps:${NC}"
-    echo "  1. Copy the configuration above to your AI assistant"
-    echo "  2. Restart your AI assistant"
-    echo "  3. Start using Godot MCP!"
-    echo ""
-    echo "  For addon installation in your Godot project:"
-    echo -e "  ${GREEN}curl -sL https://raw.githubusercontent.com/HaD0Yun/Gopeak-godot-mcp/main/install-addon.sh | bash${NC}"
-    echo ""
-    echo "For more info: https://github.com/HaD0Yun/Gopeak-godot-mcp"
-}
+while (($# > 0)); do
+  case "$1" in
+    --version)
+      (($# >= 2)) || fail "--version requires a value"
+      VERSION="${2#v}"
+      shift 2
+      ;;
+    -d|--dir)
+      (($# >= 2)) || fail "$1 requires a value"
+      deprecation "--dir" "The checkout directory is ignored; set BUN_INSTALL for a custom Bun prefix."
+      shift 2
+      ;;
+    -g|--godot)
+      (($# >= 2)) || fail "$1 requires a value"
+      GODOT_PATH="$2"
+      deprecation "--godot" "GODOT_PATH is now supplied in your MCP client configuration."
+      shift 2
+      ;;
+    -c|--configure)
+      (($# >= 2)) || fail "$1 requires a value"
+      SHOW_CONFIGURE="$2"
+      deprecation "--configure" "Use the Bun configuration examples in the README."
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      fail "unknown option: $1"
+      ;;
+  esac
+done
 
-main
+command -v bun >/dev/null 2>&1 || fail "Bun is required. Install it from https://bun.sh"
+command -v curl >/dev/null 2>&1 || fail "curl is required to download the GitHub Release"
+
+if [[ -z "$VERSION" ]]; then
+  release_json="$(curl_secure --max-filesize 1048576 -H 'Accept: application/vnd.github+json' -H 'User-Agent: gopeak-installer' "$API_URL")" \
+    || fail "could not resolve the latest GitHub Release"
+  (( ${#release_json} <= 1048576 )) || fail "latest release response exceeds the size limit"
+  VERSION="$(printf '%s' "$release_json" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\{0,1\}\([^"]*\)".*/\1/p' | head -n 1)"
+fi
+is_valid_version "$VERSION" || fail "invalid release version: ${VERSION:-<empty>}"
+
+CURRENT_VERSION=""
+if bun pm ls -g 2>/dev/null | grep -q 'gopeak@'; then
+  current_output="$(gopeak version 2>/dev/null)" || fail "existing GoPeak version could not be resolved; installation was not changed"
+  CURRENT_VERSION="$(printf '%s' "$current_output" | sed -n 's/.*v\([^[:space:]]*\).*/\1/p' | head -n 1)"
+  is_valid_version "$CURRENT_VERSION" || fail "existing GoPeak version is malformed; installation was not changed"
+  if [[ "$CURRENT_VERSION" == "$VERSION" ]]; then
+    printf 'GoPeak %s is already installed; no changes were made.\n' "$VERSION"
+    if [[ -n "$SHOW_CONFIGURE" ]]; then
+      print_configuration "$SHOW_CONFIGURE"
+    elif [[ -n "$GODOT_PATH" ]]; then
+      print_configuration claude
+    fi
+    exit 0
+  fi
+fi
+
+TEMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TEMP_DIR"' EXIT
+archive_path="${TEMP_DIR}/gopeak-${VERSION}.tgz"
+checksum_path="${archive_path}.sha256"
+
+printf 'Downloading GoPeak %s from GitHub Releases...\n' "$VERSION"
+download_verified_release "$VERSION" "$archive_path" "$checksum_path"
+
+rollback_archive=""
+if [[ -n "$CURRENT_VERSION" ]]; then
+  rollback_archive="${TEMP_DIR}/gopeak-${CURRENT_VERSION}.tgz"
+  download_verified_release "$CURRENT_VERSION" "$rollback_archive" "${rollback_archive}.sha256"
+
+  printf 'Checksums verified. Replacing the existing Bun installation...\n'
+  bun remove -g gopeak || fail "Bun could not remove the existing GoPeak release"
+  if ! bun add -g "$archive_path"; then
+    if bun add -g "$rollback_archive"; then
+      fail "Bun could not install GoPeak ${VERSION}; the previous release was restored"
+    fi
+    fail "Bun could not install GoPeak ${VERSION}, and rollback also failed"
+  fi
+else
+  printf 'Checksum verified. Installing with Bun...\n'
+  bun add -g "$archive_path" || fail "Bun could not install the verified GoPeak release"
+fi
+
+printf '\nGoPeak %s installed successfully.\n' "$VERSION"
+printf 'Shell notification hooks are optional; enable them manually with: gopeak setup\n'
+if [[ -n "$SHOW_CONFIGURE" ]]; then
+  print_configuration "$SHOW_CONFIGURE"
+elif [[ -n "$GODOT_PATH" ]]; then
+  print_configuration claude
+fi

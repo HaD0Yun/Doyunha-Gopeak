@@ -2,8 +2,8 @@
 
 [![](https://badge.mcpx.dev?type=server 'MCP Server')](https://modelcontextprotocol.io/introduction)
 [![Made with Godot](https://img.shields.io/badge/Made%20with-Godot-478CBF?style=flat&logo=godot%20engine&logoColor=white)](https://godotengine.org)
-[![](https://img.shields.io/badge/Node.js-339933?style=flat&logo=nodedotjs&logoColor=white 'Node.js')](https://nodejs.org/en/download/)
-[![npm](https://img.shields.io/npm/v/gopeak?style=flat&logo=npm&logoColor=white 'npm')](https://www.npmjs.com/package/gopeak)
+[![Bun](https://img.shields.io/badge/Bun-1.3.3%2B-f9f1e1?style=flat&logo=bun&logoColor=black 'Bun')](https://bun.sh/)
+[![GitHub Release](https://img.shields.io/github/v/release/HaD0Yun/Doyunha-Gopeak?style=flat&logo=github 'GitHub Release')](https://github.com/HaD0Yun/Doyunha-Gopeak/releases)
 [![](https://img.shields.io/badge/License-MIT-red.svg 'MIT License')](https://opensource.org/licenses/MIT)
 
 🌐 **Languages**: **English** | [한국어](README-ko.md) | [日本語](README-ja.md) | [Deutsch](README-de.md) | [Português](README-pt_BR.md) | [简体中文](README-zh.md)
@@ -16,7 +16,7 @@ It is designed for trusted Godot 4 workflows: small default tool surface, setup-
 
 > English is the canonical source of truth. Localized READMEs are concise overviews and may lag behind `README.md`.
 >
-> Discord is temporarily unavailable while the invite link is refreshed. Use [GitHub Discussions](https://github.com/HaD0Yun/Gopeak-godot-mcp/discussions) for now.
+> Discord is temporarily unavailable while the invite link is refreshed. Use [GitHub Discussions](https://github.com/HaD0Yun/Doyunha-Gopeak/discussions) for now.
 
 ---
 
@@ -25,21 +25,33 @@ It is designed for trusted Godot 4 workflows: small default tool surface, setup-
 ### Requirements
 
 - Godot 4.x
-- Node.js 18+
+- Bun 1.3.3+
 - MCP-compatible client such as Claude Desktop, Cursor, Cline, or OpenCode
 
-### 1) Run GoPeak
+### 1) Install GoPeak
 
 ```bash
-npx -y gopeak
+curl -fLO https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.3.9/gopeak-2.3.9.tgz
+curl -fLO https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.3.9/gopeak-2.3.9.tgz.sha256
+if command -v sha256sum >/dev/null 2>&1; then
+  sha256sum -c gopeak-2.3.9.tgz.sha256
+else
+  shasum -a 256 -c gopeak-2.3.9.tgz.sha256
+fi
+bun add -g "$PWD/gopeak-2.3.9.tgz"
 ```
 
-or install globally:
+This verifies the downloaded release before Bun installs it globally. The absolute tarball path avoids a relative-path bug in Bun 1.3.3. The checksum command works on Linux (`sha256sum`) and macOS (`shasum`). To use the supported installer instead, download or clone the repository and run it locally—do not pipe a remote script into a shell:
 
 ```bash
-npm install -g gopeak
-gopeak
+git clone https://github.com/HaD0Yun/Doyunha-Gopeak.git
+cd Doyunha-Gopeak
+./install.sh
 ```
+
+The release archive contains the bundled runtime. Installation and execution do not contact the npm registry or require npm credentials. For stronger provenance checking, release reviewers can also verify the GitHub artifact attestation as described in the [release process](docs/release-process.md).
+
+If you used the old installer, `--dir`, `--godot`, and `--configure` remain accepted with warnings through the `2.3.x` line and are planned for removal in `3.0.0`. The new mappings are: use Bun's global home (`BUN_INSTALL`) instead of a source checkout directory, put `GODOT_PATH` in the MCP client `env`, and use the configuration below instead of relying on installer output. During the compatibility window, `--godot` and `--configure` still print a client snippet but never write client files. See the [migration policy](docs/migration-policy.md#bun-distribution-migration) for the exact contract.
 
 ### 2) Add MCP client config
 
@@ -47,8 +59,8 @@ gopeak
 {
   "mcpServers": {
     "godot": {
-      "command": "npx",
-      "args": ["-y", "gopeak"],
+      "command": "gopeak",
+      "args": [],
       "env": {
         "GODOT_PATH": "/path/to/godot",
         "GOPEAK_TOOL_PROFILE": "compact"
@@ -99,13 +111,13 @@ Some capabilities require extra Godot-side services. GoPeak labels these instead
 Install from your Godot project folder:
 
 ```bash
-curl -sL https://raw.githubusercontent.com/HaD0Yun/Gopeak-godot-mcp/main/install-addon.sh | bash
+curl -sL https://raw.githubusercontent.com/HaD0Yun/Doyunha-Gopeak/main/install-addon.sh | bash
 ```
 
 PowerShell:
 
 ```powershell
-iwr https://raw.githubusercontent.com/HaD0Yun/Gopeak-godot-mcp/main/install-addon.ps1 -UseBasicParsing | iex
+iwr https://raw.githubusercontent.com/HaD0Yun/Doyunha-Gopeak/main/install-addon.ps1 -UseBasicParsing | iex
 ```
 
 Then enable plugins in **Project Settings → Plugins**:
@@ -119,7 +131,7 @@ Optional shell hooks for update notifications are opt-in:
 gopeak setup
 ```
 
-`gopeak setup` only modifies supported bash/zsh rc files when you run it explicitly. `npm install` does not install shell hooks automatically.
+`gopeak setup` only modifies supported bash/zsh rc files when you run it explicitly. Installing the release asset does not add shell hooks automatically.
 
 ---
 
@@ -177,18 +189,15 @@ Plain `{ "x": 100, "y": 200 }` and `[100, 200]` are also coerced for common `Vec
 ## Useful Commands
 
 ```bash
-# run from npm
-npx -y gopeak
-
-# install globally
-npm install -g gopeak
+# run the globally installed CLI
+gopeak
 
 # run from source
-git clone https://github.com/HaD0Yun/Gopeak-godot-mcp.git
-cd Gopeak-godot-mcp
+git clone https://github.com/HaD0Yun/Doyunha-Gopeak.git
+cd Doyunha-Gopeak
 bun ci
 bun run build
-node build/index.js
+bun run ./build/index.js
 
 # local verification
 bun run ci

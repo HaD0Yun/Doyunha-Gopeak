@@ -10,30 +10,24 @@ on:
       - main
       - beta
 
+permissions:
+  contents: read
+
 jobs:
-  build-typecheck-smoke:
+  build-and-test:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: [18, 20]
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
           bun-version: 1.3.3
 
       - name: Restore Bun package cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-1.3.3-${{ hashFiles('bun.lock') }}
@@ -46,80 +40,26 @@ jobs:
       - name: Build
         run: bun run build
 
-      - name: Verify selected Node runtime
-        run: node --version
-
-      - name: Probe built Node CLI
-        run: node build/cli.js --help
-
       - name: Typecheck
         run: bun run typecheck
 
-      - name: Smoke test
-        run: node scripts/smoke-test.mjs && node test-regressions.mjs && node test-godot-detection.mjs
+      - name: Runtime regression tests
+        run: bun run test:ci
+
+      - name: Dynamic groups test
+        run: bun run test:dynamic-groups
+
+      - name: Documentation policy tests
+        run: bun run test:docs
+
+      - name: Metadata consistency tests
+        run: bun run test:metadata
 
       - name: Packaging test
         run: bun run test:packaging
 
-  dynamic-groups-test:
-    runs-on: ubuntu-latest
-    needs: build-typecheck-smoke
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.3
-
-      - name: Restore Bun package cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-1.3.3-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-1.3.3-
-
-      - name: Install dependencies
-        run: bun ci
-
-      - name: Dynamic groups test
-        run: node test-dynamic-groups.mjs
-
-  audit-production-deps:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.3
-
-      - name: Restore Bun package cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-1.3.3-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-1.3.3-
-
-      - name: Install dependencies
-        run: bun ci
+      - name: Distribution archive and installer tests
+        run: bun run test:distribution
 
       - name: Audit production dependencies
         run: bun audit --prod

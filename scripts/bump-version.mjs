@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
@@ -6,10 +6,19 @@ import process from 'node:process';
 const ROOT = process.cwd();
 const PACKAGE_JSON_PATH = path.join(ROOT, 'package.json');
 const SERVER_JSON_PATH = path.join(ROOT, 'server.json');
-const README_PATH = path.join(ROOT, 'README.md');
+const VERSION_REFERENCE_PATHS = [
+  'README.md',
+  'README-de.md',
+  'README-ja.md',
+  'README-ko.md',
+  'README-pt_BR.md',
+  'README-zh.md',
+  'index.html',
+];
 const SEMVER_RE = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z-.]+)?(?:\+[0-9A-Za-z-.]+)?$/;
+const SEMVER_SOURCE = String.raw`\d+\.\d+\.\d+(?:-[0-9A-Za-z-.]+)?(?:\+[0-9A-Za-z-.]+)?`;
 
-const usage = `Usage:\n  node scripts/bump-version.mjs <version|major|minor|patch> [--dry-run]\n\nExamples:\n  node scripts/bump-version.mjs patch\n  node scripts/bump-version.mjs 2.3.0 --dry-run`;
+const usage = `Usage:\n  bun scripts/bump-version.mjs <version|major|minor|patch> [--dry-run]\n\nExamples:\n  bun scripts/bump-version.mjs patch\n  bun scripts/bump-version.mjs 2.3.0 --dry-run`;
 
 function assertVersion(version) {
   if (!SEMVER_RE.test(version)) {
@@ -29,11 +38,13 @@ function bumpVersion(currentVersion, bumpType) {
   return `${major}.${minor}.${patch + 1}`;
 }
 
-function replaceVersionReferencesInReadme(content, nextVersion) {
+function replaceReleaseVersionReferences(content, nextVersion) {
   return content
-    .replace(/(npx\s+-y\s+gopeak@)(\d+\.\d+\.\d+(?:-[0-9A-Za-z-.]+)?)/g, `$1${nextVersion}`)
-    .replace(/(npm\s+install\s+-g\s+gopeak@)(\d+\.\d+\.\d+(?:-[0-9A-Za-z-.]+)?)/g, `$1${nextVersion}`)
-    .replace(/(https:\/\/raw\.githubusercontent\.com\/HaD0Yun\/godot-mcp\/v)(\d+\.\d+\.\d+)(\/install-addon\.(?:sh|ps1))/g, `$1${nextVersion}$3`);
+    .replace(
+      new RegExp(`(releases/download/v)${SEMVER_SOURCE}(/gopeak-)${SEMVER_SOURCE}(\\.tgz)`, 'g'),
+      `$1${nextVersion}$2${nextVersion}$3`,
+    )
+    .replace(new RegExp(`(gopeak-)${SEMVER_SOURCE}(\\.tgz(?:\\.sha256)?)`, 'g'), `$1${nextVersion}$2`);
 }
 
 async function readJson(filePath) {
@@ -82,21 +93,17 @@ async function main() {
 
   const server = await readJson(SERVER_JSON_PATH);
   server.version = nextVersion;
-  if (Array.isArray(server.packages)) {
-    for (const entry of server.packages) {
-      if (entry && typeof entry === 'object' && 'version' in entry) {
-        entry.version = nextVersion;
-      }
-    }
-  }
   await writeText(SERVER_JSON_PATH, `${JSON.stringify(server, null, 2)}\n`, dryRun);
   changed.push('server.json');
 
-  const readmeOriginal = await fs.readFile(README_PATH, 'utf8');
-  const readmeUpdated = replaceVersionReferencesInReadme(readmeOriginal, nextVersion);
-  if (readmeUpdated !== readmeOriginal) {
-    await writeText(README_PATH, readmeUpdated, dryRun);
-    changed.push('README.md');
+  for (const relativePath of VERSION_REFERENCE_PATHS) {
+    const filePath = path.join(ROOT, relativePath);
+    const original = await fs.readFile(filePath, 'utf8');
+    const updated = replaceReleaseVersionReferences(original, nextVersion);
+    if (updated !== original) {
+      await writeText(filePath, updated, dryRun);
+      changed.push(relativePath);
+    }
   }
 
   console.log(`${dryRun ? '[dry-run] ' : ''}Version bump ${currentVersion} -> ${nextVersion}`);

@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * GoPeak CLI Entrypoint
  *
@@ -18,13 +18,14 @@ import { getLocalVersion } from './cli/utils.js';
 const args = process.argv.slice(2);
 const command = args[0];
 
-const CLI_COMMANDS = ['setup', 'check', 'star', 'notify', 'uninstall', 'version', 'help', '--version', '-v', '--help', '-h'];
+const CLI_COMMANDS = ['setup', 'check', 'update', 'star', 'notify', 'uninstall', 'version', 'help', '--version', '-v', '--help', '-h'];
 
 async function main(): Promise<void> {
   // If no args or not a CLI command → start MCP server (original behavior)
   if (!command || !CLI_COMMANDS.includes(command)) {
     // Dynamic import to avoid loading MCP SDK for CLI-only commands
-    await import('./index.js');
+    const { runGodotServer } = await import('./index.js');
+    await runGodotServer();
     return;
   }
 
@@ -37,6 +38,11 @@ async function main(): Promise<void> {
     case 'check': {
       const { checkForUpdates } = await import('./cli/check.js');
       await checkForUpdates(args.slice(1));
+      break;
+    }
+    case 'update': {
+      const { updateGoPeak } = await import('./cli/update.js');
+      await updateGoPeak();
       break;
     }
     case 'star': {
@@ -80,6 +86,7 @@ Usage:
   gopeak check          Check for GoPeak updates
   gopeak check --bg     Background check (used by shell hooks)
   gopeak check --quiet  Print only if update available
+  gopeak update         Download, verify, and install the latest GitHub Release
   gopeak star           Star GoPeak on GitHub
   gopeak uninstall      Remove shell hooks
   gopeak version        Show current version
@@ -88,11 +95,11 @@ Usage:
 Shell hooks wrap these commands with update notifications:
   claude, codex, gemini, opencode, omc, omx
 
-More info: https://github.com/HaD0Yun/Gopeak-godot-mcp
+More info: https://github.com/HaD0Yun/Doyunha-Gopeak
 `.trim());
 }
 
-main().catch((err) => {
-  console.error('gopeak:', err.message ?? err);
+await main().catch((error: unknown) => {
+  console.error('gopeak:', error instanceof Error ? error.message : String(error));
   process.exit(1);
 });

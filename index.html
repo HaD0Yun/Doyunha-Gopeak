@@ -8,14 +8,14 @@
   <meta name="keywords" content="godot mcp, godot mcp server, model context protocol godot, godot ai, gopeak, godot engine ai, godot claude, godot cursor, godot game development ai, mcp server, godot tools, gdscript ai, godot automation">
   <meta name="author" content="HaD0Yun">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://github.com/HaD0Yun/Gopeak-godot-mcp">
+  <link rel="canonical" href="https://github.com/HaD0Yun/Doyunha-Gopeak">
 
   <!-- Open Graph -->
   <meta property="og:title" content="GoPeak — MCP Server for Godot Engine">
   <meta property="og:description" content="The most comprehensive Model Context Protocol server for Godot Engine. 95+ tools for AI-assisted game development.">
-  <meta property="og:url" content="https://github.com/HaD0Yun/Gopeak-godot-mcp">
+  <meta property="og:url" content="https://github.com/HaD0Yun/Doyunha-Gopeak">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://raw.githubusercontent.com/HaD0Yun/Gopeak-godot-mcp/main/assets/gopeak-banner.png">
+  <meta property="og:image" content="https://raw.githubusercontent.com/HaD0Yun/Doyunha-Gopeak/main/assets/gopeak-banner.png">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
@@ -30,7 +30,7 @@
     "name": "GoPeak",
     "alternateName": "godot-mcp",
     "description": "The most comprehensive Model Context Protocol (MCP) server for Godot Engine. 95+ tools for AI-assisted game development including scene management, GDScript LSP diagnostics, DAP debugger, screenshot capture, input injection, ClassDB introspection, and CC0 asset library.",
-    "url": "https://github.com/HaD0Yun/Gopeak-godot-mcp",
+    "url": "https://github.com/HaD0Yun/Doyunha-Gopeak",
     "applicationCategory": "DeveloperApplication",
     "operatingSystem": "Windows, macOS, Linux",
     "offers": {
@@ -43,10 +43,10 @@
       "name": "HaD0Yun",
       "url": "https://github.com/HaD0Yun"
     },
-    "codeRepository": "https://github.com/HaD0Yun/Gopeak-godot-mcp",
+    "codeRepository": "https://github.com/HaD0Yun/Doyunha-Gopeak",
     "programmingLanguage": ["TypeScript", "GDScript"],
-    "runtimePlatform": "Node.js",
-    "softwareRequirements": "Godot Engine 4.2+, Node.js 18+"
+    "runtimePlatform": "Bun",
+    "softwareRequirements": "Godot Engine 4.2+, Bun 1.3.3+"
   }
   </script>
 
@@ -97,7 +97,7 @@
 <body>
   <div class="container">
     <h1><span>GoPeak</span></h1>
-    <p class="tagline">The most comprehensive MCP server for Godot Engine — 95+ tools for AI-assisted game development</p>
+    <p class="tagline">A trusted Godot 4 MCP workflow for editing, running, inspecting, and fixing real projects</p>
 
     <div class="stats">
       <div class="stat">
@@ -115,15 +115,17 @@
     </div>
 
     <div class="cta">
-      <a href="https://github.com/HaD0Yun/Gopeak-godot-mcp" class="btn btn-primary">View on GitHub</a>
-      <a href="https://www.npmjs.com/package/gopeak" class="btn btn-secondary">npm: gopeak</a>
+      <a href="https://github.com/HaD0Yun/Doyunha-Gopeak" class="btn btn-primary">View on GitHub</a>
+      <a href="https://github.com/HaD0Yun/Doyunha-Gopeak/releases" class="btn btn-secondary">GitHub Releases</a>
     </div>
 
     <div class="install">
       <h2>Quick Install</h2>
-      <pre><code>npx gopeak@latest</code></pre>
-      <p style="color:#8b949e; margin-top:8px;">Or install globally:</p>
-      <pre><code>npm install -g gopeak</code></pre>
+      <pre><code>curl -fLO https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.3.9/gopeak-2.3.9.tgz
+curl -fLO https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.3.9/gopeak-2.3.9.tgz.sha256
+if command -v sha256sum &gt;/dev/null 2&gt;&amp;1; then sha256sum -c gopeak-2.3.9.tgz.sha256; else shasum -a 256 -c gopeak-2.3.9.tgz.sha256; fi
+bun add -g "$PWD/gopeak-2.3.9.tgz"</code></pre>
+      <p style="color:#8b949e; margin-top:8px;">Requires Bun 1.3.3+. The archive includes the bundled runtime, so installation needs no registry credentials or install-time dependency download. Verify the checksum before installing; release reviewers can also verify the GitHub artifact attestation.</p>
     </div>
 
     <div class="features">
@@ -172,17 +174,17 @@
     <div style="margin-bottom:40px;">
       <h2 style="margin-bottom:16px;">Documentation</h2>
       <p style="color:#8b949e;">
-        📖 <a href="https://github.com/HaD0Yun/Gopeak-godot-mcp#readme" style="color:#478cbf;">English</a> ·
-        <a href="https://github.com/HaD0Yun/Gopeak-godot-mcp/blob/main/README-ko.md" style="color:#478cbf;">한국어</a> ·
-        <a href="https://github.com/HaD0Yun/Gopeak-godot-mcp/blob/main/README-zh.md" style="color:#478cbf;">中文</a> ·
-        <a href="https://github.com/HaD0Yun/Gopeak-godot-mcp/blob/main/README-ja.md" style="color:#478cbf;">日本語</a> ·
-        <a href="https://github.com/HaD0Yun/Gopeak-godot-mcp/blob/main/README-de.md" style="color:#478cbf;">Deutsch</a> ·
-        <a href="https://github.com/HaD0Yun/Gopeak-godot-mcp/blob/main/README-pt_BR.md" style="color:#478cbf;">Português</a>
+        📖 <a href="https://github.com/HaD0Yun/Doyunha-Gopeak#readme" style="color:#478cbf;">English</a> ·
+        <a href="https://github.com/HaD0Yun/Doyunha-Gopeak/blob/main/README-ko.md" style="color:#478cbf;">한국어</a> ·
+        <a href="https://github.com/HaD0Yun/Doyunha-Gopeak/blob/main/README-zh.md" style="color:#478cbf;">中文</a> ·
+        <a href="https://github.com/HaD0Yun/Doyunha-Gopeak/blob/main/README-ja.md" style="color:#478cbf;">日本語</a> ·
+        <a href="https://github.com/HaD0Yun/Doyunha-Gopeak/blob/main/README-de.md" style="color:#478cbf;">Deutsch</a> ·
+        <a href="https://github.com/HaD0Yun/Doyunha-Gopeak/blob/main/README-pt_BR.md" style="color:#478cbf;">Português</a>
       </p>
     </div>
 
     <footer>
-      <p>GoPeak is open source under the <a href="https://github.com/HaD0Yun/Gopeak-godot-mcp/blob/main/LICENSE">MIT License</a>.</p>
+      <p>GoPeak is open source under the <a href="https://github.com/HaD0Yun/Doyunha-Gopeak/blob/main/LICENSE">MIT License</a>.</p>
       <p style="margin-top:8px;">Made by <a href="https://github.com/HaD0Yun">HaD0Yun</a></p>
     </footer>
   </div>

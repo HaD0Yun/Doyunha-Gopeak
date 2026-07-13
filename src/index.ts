@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Godot MCP Server
  *
@@ -6618,6 +6618,9 @@ class GodotServer {
 
       const transport = new StdioServerTransport();
       await this.server.connect(transport);
+      process.stdin.once('end', () => {
+        void this.handleShutdown('stdin:end', 0);
+      });
       console.error('Godot MCP server running on stdio');
 
       // Start the Godot Editor Bridge (WebSocket server for editor plugin).
@@ -6628,7 +6631,15 @@ class GodotServer {
         const bridgeStatus = this.godotBridge.getStatus();
         console.error(`[SERVER] Godot Editor Bridge started on ${bridgeStatus.host}:${bridgeStatus.port}`);
       } catch (bridgeError) {
-        const bridgeMessage = bridgeError instanceof Error ? bridgeError.message : String(bridgeError);
+        const bridgeCode = bridgeError instanceof Error
+          && 'code' in bridgeError
+          && typeof bridgeError.code === 'string'
+          ? bridgeError.code
+          : null;
+        const errorMessage = bridgeError instanceof Error ? bridgeError.message : String(bridgeError);
+        const bridgeMessage = bridgeCode && !errorMessage.includes(bridgeCode)
+          ? `${bridgeCode}: ${errorMessage}`
+          : errorMessage;
         this.bridgeStartupError = bridgeMessage;
         console.error(`[SERVER] Warning: Godot Editor Bridge failed to start: ${bridgeMessage}`);
         console.error('[SERVER] Continuing without bridge-backed editor tools.');
@@ -7590,22 +7601,7 @@ uniform float dissolve_amount : hint_range(0.0, 1.0) = 0.0;
   }
 }
 
-// Create and run the server, but only when index.js is the entry point.
-// Importing the module (e.g. for unit tests of scanDirectoryForGodotBinaries)
-// must NOT start the MCP server.
-const isMainModule = () => {
-  try {
-    return process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
-  } catch {
-    return false;
-  }
-};
-
-if (isMainModule()) {
+export async function runGodotServer(): Promise<void> {
   const server = new GodotServer();
-  server.run().catch((error: unknown) => {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Failed to run server:', errorMessage);
-    process.exit(1);
-  });
+  await server.run();
 }
