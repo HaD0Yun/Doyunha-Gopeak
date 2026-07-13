@@ -37,7 +37,7 @@ Ground truth from current repository:
 - Tools list and execution still function in compact and full profiles.
 - Existing resource URIs keep working (`godot://project/info`, `godot://scene/{path}`, etc.).
 - Prompt endpoints are discoverable and invocable from MCP clients that support prompts.
-- No breaking change to current `npx -y gopeak` startup and basic operations.
+- No breaking change to the globally installed `gopeak` startup and basic operations.
 
 ### Risks
 
@@ -92,7 +92,7 @@ Ground truth from current repository:
 
 1. Make platform evolution safe through repeatable verification.
 2. Protect backward compatibility (aliases, profiles, capability behavior).
-3. Improve release confidence for npm + MCP registry metadata.
+3. Improve release confidence for bundled GitHub Release assets, checksums, attestations, and MCP repository metadata.
 
 ### Candidate deliverables
 
@@ -104,7 +104,7 @@ Ground truth from current repository:
 
 - Every capability-affecting PR includes verification evidence.
 - Backward compatibility checks are run before version bumps.
-- Release artifacts (`build/`, `package.json`, `server.json`) are validated together.
+- Release artifacts (`gopeak-<version>.tgz`, its SHA-256 checksum, and provenance attestation), registry-free installation behavior, `package.json`, and `server.json` are validated together.
 
 ### Risks
 

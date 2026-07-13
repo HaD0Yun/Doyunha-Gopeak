@@ -4,8 +4,8 @@
 
 ## Current baseline (March 2026)
 
-- Package version: `2.3.4`
-- Distribution: npm package `gopeak`, MCP metadata in `server.json`
+- Package version: `2.3.9`
+- Distribution: bundled versioned GitHub Release tarball + SHA-256 checksum + provenance attestation, installed globally with Bun without install-time registry resolution; repository metadata in `server.json`
 - Default tool exposure: `compact` profile
 - Capability surface: 33 core tools + 22 dynamic groups (110+ tools total)
 - Additional MCP capabilities: resources are implemented, prompts are available, stdio remains the default transport

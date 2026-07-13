@@ -7,13 +7,13 @@ Thanks for contributing to GoPeak. This guide focuses on the current repository 
 - Search existing GitHub issues and pull requests before starting overlapping work.
 - Prefer small, reviewable changes over broad rewrites.
 - Keep user-visible behavior stable unless the change is explicitly intended to modify it.
-- When touching packaging or installation flows, preserve the current opt-in shell-hook behavior (`gopeak setup`) and avoid silent shell rc mutations during `npm install`.
+- When touching packaging or installation flows, preserve the current opt-in shell-hook behavior (`gopeak setup`) and avoid silent shell rc mutations during release installation.
 
 ## Development setup
 
 ```bash
-git clone https://github.com/HaD0Yun/Gopeak-godot-mcp.git
-cd Gopeak-godot-mcp
+git clone https://github.com/HaD0Yun/Doyunha-Gopeak.git
+cd Doyunha-Gopeak
 bun ci
 bun run build
 ```
@@ -22,7 +22,6 @@ Helpful commands:
 
 ```bash
 bun run watch              # TypeScript watch mode
-bun run inspector          # MCP inspector against build/index.js
 bun run test:setup         # Shell-hook regression checks
 ```
 
@@ -41,7 +40,7 @@ bun run test:setup         # Shell-hook regression checks
 ├── docs/                  # Architecture, roadmap, release docs
 ├── test-*.mjs             # Integration and regression coverage
 ├── server.json            # MCP registry metadata
-└── package.json           # npm metadata and scripts
+└── package.json           # Bun package metadata and scripts
 ```
 
 ## Expected workflow
@@ -49,7 +48,7 @@ bun run test:setup         # Shell-hook regression checks
 1. Make the smallest change that solves the problem.
 2. Reuse existing helpers and naming patterns before introducing new abstractions.
 3. Update docs when behavior, install flow, or capability claims change.
-4. Keep `package.json`, `server.json`, README claims, and release notes aligned when metadata changes.
+4. Keep `package.json`, `server.json`, README claims, GitHub Release assets, checksum/attestation guidance, and release notes aligned when metadata changes.
 
 ## Verification before PR
 

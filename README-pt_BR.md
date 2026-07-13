@@ -10,19 +10,21 @@
 
 ### Requisitos
 - Godot 4.x
-- Node.js 18+
+- Bun 1.3.3+
 - Cliente compatível com MCP
 
 ### Executar
 ```bash
-npx -y gopeak
-```
-
-ou:
-```bash
-npm install -g gopeak
+curl -fLO https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.3.9/gopeak-2.3.9.tgz
+curl -fLO https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.3.9/gopeak-2.3.9.tgz.sha256
+if command -v sha256sum >/dev/null 2>&1; then sha256sum -c gopeak-2.3.9.tgz.sha256; else shasum -a 256 -c gopeak-2.3.9.tgz.sha256; fi
+bun add -g "$PWD/gopeak-2.3.9.tgz"
 gopeak
 ```
+
+Após a verificação do checksum, o Bun instala o arquivo de release globalmente. No Linux, usa-se `sha256sum`; no macOS, `shasum`.
+
+As opções antigas `--dir`, `--godot` e `--configure` continuam aceitas com aviso durante a série `2.3.x` e serão removidas em `3.0.0`. Consulte a [política de migração](docs/migration-policy.md#bun-distribution-migration) para o mapeamento do local de instalação, caminho do Godot e configuração do cliente.
 
 ## Resumo
 - Ferramentas principais confiáveis + grupos dinâmicos ativados sob demanda

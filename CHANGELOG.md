@@ -7,8 +7,15 @@ All notable changes to GoPeak (godot-mcp) will be documented in this file.
 ## [2.3.9] - 2026-07-13
 
 ### Fixed
-- Refreshed production dependency resolutions for `ws`, `hono`, and `qs` so the production npm audit gate passes again.
+- Refreshed production dependency resolutions for `ws`, `hono`, and `qs` so the production dependency audit gate passes again.
 - Kept the MCP registry metadata synchronized with the package release version.
+
+### Changed
+- Replaced registry-based CLI distribution with checksum-verified GitHub Release tarballs installed globally by Bun.
+- Updated current install, update, release, localized quick-start, and MCP metadata guidance for the GitHub Release flow.
+- Bundled the runtime so installation no longer resolves registry dependencies or needs registry credentials.
+- Kept the legacy installer flags `--dir`, `--godot`, and `--configure` as deprecated `2.3.x` compatibility options, with terminal-only config output and replacement guidance before their planned `3.0.0` removal.
+- Added GitHub artifact attestation alongside SHA-256 verification for release provenance.
 
 ## [2.3.7] - 2026-05-14
 

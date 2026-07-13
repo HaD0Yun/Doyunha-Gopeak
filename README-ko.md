@@ -10,27 +10,29 @@
 
 ### 요구사항
 - Godot 4.x
-- Node.js 18+
+- Bun 1.3.3+
 - MCP-compatible client
 
 ### 실행
 ```bash
-npx -y gopeak
-```
-
-또는:
-```bash
-npm install -g gopeak
+curl -fLO https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.3.9/gopeak-2.3.9.tgz
+curl -fLO https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.3.9/gopeak-2.3.9.tgz.sha256
+if command -v sha256sum >/dev/null 2>&1; then sha256sum -c gopeak-2.3.9.tgz.sha256; else shasum -a 256 -c gopeak-2.3.9.tgz.sha256; fi
+bun add -g "$PWD/gopeak-2.3.9.tgz"
 gopeak
 ```
+
+체크섬이 일치해야 Bun이 릴리스 파일을 전역 설치합니다. Linux에서는 `sha256sum`, macOS에서는 `shasum`을 사용합니다.
+
+기존 설치기의 `--dir`, `--godot`, `--configure` 옵션은 `2.3.x` 동안 경고와 함께 호환되며 `3.0.0`에서 제거될 예정입니다. 새 설치 위치·Godot 경로·클라이언트 설정 방식은 [마이그레이션 정책](docs/migration-policy.md#bun-distribution-migration)을 확인하세요.
 
 ### MCP 설정 예시
 ```json
 {
   "mcpServers": {
     "godot": {
-      "command": "npx",
-      "args": ["-y", "gopeak"]
+      "command": "gopeak",
+      "args": []
     }
   }
 }
