@@ -145,7 +145,7 @@ For any change that touches MCP capabilities or transport:
    - Keep compact profile discoverability (`tool.catalog`) working.
    - Confirm legacy aliases still resolve.
 5. **Release artifact checks**
-   - `npm run build` success and package metadata consistency (`package.json`, `server.json`).
+   - `bun run build` success and package metadata consistency (`package.json`, `server.json`).
 
 ---
 
