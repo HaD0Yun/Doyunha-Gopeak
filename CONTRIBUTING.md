@@ -14,16 +14,16 @@ Thanks for contributing to GoPeak. This guide focuses on the current repository 
 ```bash
 git clone https://github.com/HaD0Yun/Gopeak-godot-mcp.git
 cd Gopeak-godot-mcp
-npm install
-npm run build
+bun ci
+bun run build
 ```
 
 Helpful commands:
 
 ```bash
-npm run watch              # TypeScript watch mode
-npm run inspector          # MCP inspector against build/index.js
-npm run test:setup         # Shell-hook regression checks
+bun run watch              # TypeScript watch mode
+bun run inspector          # MCP inspector against build/index.js
+bun run test:setup         # Shell-hook regression checks
 ```
 
 ## Repository map
@@ -56,15 +56,15 @@ npm run test:setup         # Shell-hook regression checks
 Run the repository checks that cover your area. For most feature or packaging changes, run all of these:
 
 ```bash
-npm run ci
-npm run test:dynamic-groups
-npm run test:integration
-npm run test:setup
+bun run ci
+bun run test:dynamic-groups
+bun run test:integration
+bun run test:setup
 ```
 
 If a command is not relevant or fails for an existing unrelated reason, call that out in the PR description with exact output.
 
-For bridge transport, compact-profile, or tool-discovery changes, also include the targeted checks that cover those paths (typically `npm run test:dynamic-groups`, `npm run test:integration`, or the closest focused regression script).
+For bridge transport, compact-profile, or tool-discovery changes, also include the targeted checks that cover those paths (typically `bun run test:dynamic-groups`, `bun run test:integration`, or the closest focused regression script).
 
 ## Capability changes
 

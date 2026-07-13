@@ -44,11 +44,11 @@ Every hide/remove/rename/API-contract change must be tracked with this row shape
 Run the relevant checks before publishing a migration claim:
 
 ```bash
-npm run build
-npm run typecheck
-npm run test:dynamic-groups
-npm run test:metadata
-npm run test:packaging
+bun run build
+bun run typecheck
+bun run test:dynamic-groups
+bun run test:metadata
+bun run test:packaging
 ```
 
-For capability changes, also verify the affected MCP path with a compact-profile `tools/list` and `tools/call` smoke. For package/docs claim changes, run `npm run test:docs` and the metadata/packaging checks.
+For capability changes, also verify the affected MCP path with a compact-profile `tools/list` and `tools/call` smoke. For package/docs claim changes, run `bun run test:docs` and the metadata/packaging checks.

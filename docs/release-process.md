@@ -23,10 +23,10 @@ node scripts/bump-version.mjs patch --dry-run
 Run release checks before tagging:
 
 ```bash
-npm run ci
-npm run test:dynamic-groups
-npm run test:integration
-npm run test:setup
+bun run ci
+bun run test:dynamic-groups
+bun run test:integration
+bun run test:setup
 ```
 
 ## 3) Commit + tag

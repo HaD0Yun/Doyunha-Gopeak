@@ -16,7 +16,7 @@ Brief description of the changes.
 
 ## Testing
 
-- [ ] `npm run build` passes
+- [ ] `bun run build` passes
 - [ ] Tested with MCP client (which one?)
 - [ ] New tools documented in README
 

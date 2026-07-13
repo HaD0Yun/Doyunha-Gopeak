@@ -186,15 +186,15 @@ npm install -g gopeak
 # run from source
 git clone https://github.com/HaD0Yun/Gopeak-godot-mcp.git
 cd Gopeak-godot-mcp
-npm install
-npm run build
+bun ci
+bun run build
 node build/index.js
 
 # local verification
-npm run ci
-npm run test:dynamic-groups
-npm run test:metadata
-npm run test:packaging
+bun run ci
+bun run test:dynamic-groups
+bun run test:metadata
+bun run test:packaging
 ```
 
 CLI bin names:
