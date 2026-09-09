@@ -217,8 +217,18 @@ async function main() {
   assert.match(INDEX_SOURCE, /@file:/, 'index.ts should pass operation params via @file: temp payloads');
   assert.match(
     INDEX_SOURCE,
-    /private async handleRunProject[\s\S]*?const cmdArgs = \[[^\]]*'--headless'[^\]]*'-d'[^\]]*'--path'[^\]]*args\.projectPath[^\]]*\]/,
-    'run_project should launch Godot with --headless in handleRunProject cmdArgs',
+    /private async handleRunProject[\s\S]*?const cmdArgs = this\.resolveHeadless\(args\.headless\)\s*\n\s*\? \['--headless', '-d', '--path', args\.projectPath\]/,
+    'run_project should still launch Godot with --headless whenever headless is resolved',
+  );
+  assert.match(
+    INDEX_SOURCE,
+    /private resolveHeadless[\s\S]*?if \(typeof requested === 'boolean'\) \{\s*\n\s*return requested;/,
+    'an explicit headless argument should win over the environment',
+  );
+  assert.match(
+    INDEX_SOURCE,
+    /private resolveHeadless[\s\S]*?return !\(process\.env\.DISPLAY \|\| process\.env\.WAYLAND_DISPLAY\);/,
+    'with no explicit argument a display-less environment such as CI should stay headless',
   );
   assert.match(
     CLI_NOTIFY_SOURCE,
@@ -265,6 +275,12 @@ async function main() {
     RUNTIME_SOURCE,
     /if keycode_raw is String and not \(keycode_raw as String\)\.is_empty\(\) and key_label\.is_empty\(\):\s*\n\s*key_label = keycode_raw as String/m,
     'runtime key injection should treat string keycode values as key labels',
+  );
+
+  assert.match(
+    INDEX_SOURCE,
+    /if \(args\.headless === false\) \{\s*cmdArgs\.shift\(\);/,
+    'run_project must let a caller opt out of headless, since capture_screenshot cannot work against a game that renders nothing',
   );
 
   await testEditorStatusPortConflict();
