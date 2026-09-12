@@ -2,12 +2,12 @@
 
 > Current planning lives in [`docs/platform-roadmap.md`](docs/platform-roadmap.md). This root file is a short status snapshot so the repository does not drift behind the codebase.
 
-## Current baseline (March 2026)
+## Current baseline (September 2026)
 
-- Package version: `2.3.9`
+- Package version: `2.4.0`
 - Distribution: bundled versioned GitHub Release tarball + SHA-256 checksum + provenance attestation, installed globally with Bun without install-time registry resolution; repository metadata in `server.json`
 - Default tool exposure: `compact` profile
-- Capability surface: 33 core tools + 22 dynamic groups (110+ tools total)
+- Capability surface: 34 core tools + 22 dynamic groups (110+ tools total)
 - Additional MCP capabilities: resources are implemented, prompts are available, stdio remains the default transport
 - Runtime integrations: Godot bridge, LSP, DAP, runtime addon, visualizer
 

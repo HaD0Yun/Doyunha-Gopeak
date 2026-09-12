@@ -15,17 +15,17 @@
 
 ### 実行
 ```bash
-bun add -g https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.3.9/gopeak-2.3.9.tgz
+bun add -g https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.4.0/gopeak-2.4.0.tgz
 gopeak
 ```
 
 これは最も簡単なインストール方法です。パッケージレジストリを使わず、GitHub Release のバンドルを直接インストールします。チェックサムも検証する場合は、次の方法を使用してください。
 
 ```bash
-curl -fLO https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.3.9/gopeak-2.3.9.tgz
-curl -fLO https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.3.9/gopeak-2.3.9.tgz.sha256
-if command -v sha256sum >/dev/null 2>&1; then sha256sum -c gopeak-2.3.9.tgz.sha256; else shasum -a 256 -c gopeak-2.3.9.tgz.sha256; fi
-bun add -g "$PWD/gopeak-2.3.9.tgz"
+curl -fLO https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.4.0/gopeak-2.4.0.tgz
+curl -fLO https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.4.0/gopeak-2.4.0.tgz.sha256
+if command -v sha256sum >/dev/null 2>&1; then sha256sum -c gopeak-2.4.0.tgz.sha256; else shasum -a 256 -c gopeak-2.4.0.tgz.sha256; fi
+bun add -g "$PWD/gopeak-2.4.0.tgz"
 gopeak
 ```
 

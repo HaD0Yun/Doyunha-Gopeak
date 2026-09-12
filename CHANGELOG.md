@@ -4,6 +4,26 @@ All notable changes to GoPeak (godot-mcp) will be documented in this file.
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-09-12
+
+### Added
+- `rescan_filesystem` (compact alias `project.rescan`) rescans the project in the running editor and waits for the scan and import to settle, so a `class_name` written outside Godot resolves without clicking on the editor window. The compact profile now exposes 34 tools and the default `GOPEAK_TOOLS_PAGE_SIZE` moved to 34 to match. (#78)
+- `run_project` accepts a `headless` boolean. When omitted it follows the environment: headless where there is no display (CI), windowed on macOS, Windows, or a Linux desktop, so `capture_screenshot`, `capture_viewport`, and the input injection tools can work against a game started over MCP. (#81, #82)
+
+### Fixed
+- The runtime addon binds to `127.0.0.1` by default (override with the `godot_mcp/runtime/bind_address` project setting) and stays off in release exports, so a shipped game no longer serves an unauthenticated command socket to the network. (#75)
+- A headless operation launched while the game already owns port 7777 now logs a warning instead of an error, so `project_setting_get` and other core tools stop failing on the stderr `ERROR` check. (#74, #79)
+- `tool_catalog` entries carry `callAs` and `requiresGroupActivation`, so testing-group tools without a compact alias no longer read as uncallable. (#74, #79)
+- `tool_catalog` matches any term of a multi-word query and ranks by how many terms hit, instead of requiring the whole phrase as one substring. (#84)
+- `inject_key` sets `physical_keycode` and `key_label` alongside `keycode` and applies the advertised `shift`, `ctrl`, and `alt` modifiers, so actions bound by physical key or label now match. (#83)
+- `lsp_get_diagnostics` matches Godot's percent-encoded file URIs (Windows drive colon on Godot 4.5+), and a diagnostics timeout or lost connection now fails instead of reporting an empty, clean-looking result. (#77)
+- `godot://project/info` parses multi-line `project.godot` values such as input actions instead of truncating them to `{`. (#76)
+- `get_dependencies` sends the `max_depth` and `include_built_in` names the operation script reads, and no longer skips everything under `addons/` as built-in. (#80)
+- Raised production dependency overrides so `bun audit --prod` passes again. (#86)
+
+### Changed
+- Distribution is unchanged: install the versioned GitHub Release tarball globally with Bun (`bun add -g "$PWD/gopeak-2.4.0.tgz"`) after verifying its SHA-256 checksum.
+
 ## [2.3.9] - 2026-07-13
 
 ### Fixed
