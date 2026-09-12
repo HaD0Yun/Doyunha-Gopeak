@@ -228,7 +228,7 @@ CLI bin names:
 | `GODOT_PATH` | Explicit Godot executable path | auto-detect |
 | `GODOT_BRIDGE_PORT` | Bridge/Visualizer HTTP+WS port override | `6505` |
 | `GOPEAK_BRIDGE_HOST` | Bridge/Visualizer bind host | `127.0.0.1` |
-| `GOPEAK_TOOLS_PAGE_SIZE` | Number of tools per `tools/list` page | `33` |
+| `GOPEAK_TOOLS_PAGE_SIZE` | Number of tools per `tools/list` page | `34` |
 | `GOPEAK_RUNTIME_TIMEOUT_MS` | Runtime addon command timeout in milliseconds | `10000` |
 | `DEBUG` | Enable server debug logs | `false` |
 | `LOG_MODE` | Recording mode: `lite` or `full` | `lite` |
