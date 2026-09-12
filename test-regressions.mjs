@@ -276,13 +276,6 @@ async function main() {
     /if keycode_raw is String and not \(keycode_raw as String\)\.is_empty\(\) and key_label\.is_empty\(\):\s*\n\s*key_label = keycode_raw as String/m,
     'runtime key injection should treat string keycode values as key labels',
   );
-
-  assert.match(
-    INDEX_SOURCE,
-    /if \(args\.headless === false\) \{\s*cmdArgs\.shift\(\);/,
-    'run_project must let a caller opt out of headless, since capture_screenshot cannot work against a game that renders nothing',
-  );
-
   await testEditorStatusPortConflict();
   console.log('regression tests passed');
 }

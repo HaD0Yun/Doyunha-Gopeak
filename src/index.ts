@@ -1898,10 +1898,6 @@ class GodotServer {
   }
 
   /**
-   * Handle the run_project tool
-   * @param args Tool arguments
-   */
-  /**
    * Whether to launch the game without a window.
    *
    * A headless Godot renders nothing, so capture_screenshot, capture_viewport and the input
@@ -1923,6 +1919,10 @@ class GodotServer {
     return !(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
   }
 
+  /**
+   * Handle the run_project tool
+   * @param args Tool arguments
+   */
   private async handleRunProject(args: any) {
     // Normalize parameters to camelCase
     args = this.normalizeParameters(args);
@@ -1977,13 +1977,6 @@ class GodotServer {
       const cmdArgs = this.resolveHeadless(args.headless)
         ? ['--headless', '-d', '--path', args.projectPath]
         : ['-d', '--path', args.projectPath];
-      // Headless stays the default, but it has to be possible to opt out. A headless Godot
-      // draws nothing, so capture_screenshot and capture_viewport fail against a game
-      // started here with `Parameter "t" is null` from the dummy texture storage, and there
-      // is otherwise no way to launch a game they can see.
-      if (args.headless === false) {
-        cmdArgs.shift();
-      }
       if (args.scene && this.validatePath(args.scene)) {
         this.logDebug(`Adding scene parameter: ${args.scene}`);
         cmdArgs.push(args.scene);
