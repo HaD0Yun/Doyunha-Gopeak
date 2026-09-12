@@ -266,6 +266,16 @@ async function main() {
     /if keycode_raw is String and not \(keycode_raw as String\)\.is_empty\(\) and key_label\.is_empty\(\):\s*\n\s*key_label = keycode_raw as String/m,
     'runtime key injection should treat string keycode values as key labels',
   );
+  assert.match(
+    RUNTIME_SOURCE,
+    /event\.physical_keycode = event\.keycode\s*\n\s*event\.key_label = event\.keycode/m,
+    'runtime key injection should set physical_keycode and key_label so actions bound by physical key or label match',
+  );
+  assert.match(
+    RUNTIME_SOURCE,
+    /event\.shift_pressed = bool\(params\.get\("shift", false\)\)\s*\n\s*event\.ctrl_pressed = bool\(params\.get\("ctrl", false\)\)\s*\n\s*event\.alt_pressed = bool\(params\.get\("alt", false\)\)/m,
+    'runtime key injection should apply the shift/ctrl/alt modifiers the tool schema advertises',
+  );
 
   await testEditorStatusPortConflict();
   console.log('regression tests passed');

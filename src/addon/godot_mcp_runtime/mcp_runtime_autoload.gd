@@ -399,13 +399,29 @@ func _cmd_inject_key(params: Dictionary) -> Dictionary:
 		event.keycode = keycode
 	else:
 		return {"type": "error", "message": "keycode or key_label required"}
-	
+
+	# A key event from a real keyboard carries all three, and InputMap consults whichever one
+	# the bound event declares: keycode first, then physical_keycode, then key_label. An
+	# injected event with only keycode set can therefore never match an action bound by
+	# physical key, which is how a rebinding UI normally stores one, so inject_key silently
+	# did nothing for those actions.
+	event.physical_keycode = event.keycode
+	event.key_label = event.keycode
+
+	event.shift_pressed = bool(params.get("shift", false))
+	event.ctrl_pressed = bool(params.get("ctrl", false))
+	event.alt_pressed = bool(params.get("alt", false))
+
 	Input.parse_input_event(event)
-	
+
 	return {
 		"type": "input_injected",
 		"input_type": "key",
 		"keycode": event.keycode,
+		"physical_keycode": event.physical_keycode,
+		"shift": event.shift_pressed,
+		"ctrl": event.ctrl_pressed,
+		"alt": event.alt_pressed,
 		"pressed": pressed
 	}
 
