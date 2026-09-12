@@ -390,8 +390,18 @@ async function main() {
   assert.match(INDEX_SOURCE, /@file:/, 'index.ts should pass operation params via @file: temp payloads');
   assert.match(
     INDEX_SOURCE,
-    /private async handleRunProject[\s\S]*?const cmdArgs = \[[^\]]*'--headless'[^\]]*'-d'[^\]]*'--path'[^\]]*args\.projectPath[^\]]*\]/,
-    'run_project should launch Godot with --headless in handleRunProject cmdArgs',
+    /private async handleRunProject[\s\S]*?const cmdArgs = this\.resolveHeadless\(args\.headless\)\s*\n\s*\? \['--headless', '-d', '--path', args\.projectPath\]/,
+    'run_project should still launch Godot with --headless whenever headless is resolved',
+  );
+  assert.match(
+    INDEX_SOURCE,
+    /private resolveHeadless[\s\S]*?if \(typeof requested === 'boolean'\) \{\s*\n\s*return requested;/,
+    'an explicit headless argument should win over the environment',
+  );
+  assert.match(
+    INDEX_SOURCE,
+    /private resolveHeadless[\s\S]*?return !\(process\.env\.DISPLAY \|\| process\.env\.WAYLAND_DISPLAY\);/,
+    'with no explicit argument a display-less environment such as CI should stay headless',
   );
   assert.match(
     CLI_NOTIFY_SOURCE,

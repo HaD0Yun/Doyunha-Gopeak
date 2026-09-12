@@ -20,7 +20,7 @@ export function buildToolDefinitions(godotBridgePort: number): MCPToolDefinition
         },
         {
           name: 'run_project',
-          description: 'Launches a Godot project in a new window and captures output. Use to test gameplay or verify script behavior. Runs until stop_project is called. Use get_debug_output to retrieve logs.',
+          description: 'Launches a Godot project and captures output. Use to test gameplay or verify script behavior. Runs headless where there is no display and windowed where there is, unless the headless argument says otherwise. Runs until stop_project is called. Use get_debug_output to retrieve logs.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -31,6 +31,10 @@ export function buildToolDefinitions(godotBridgePort: number): MCPToolDefinition
               scene: {
                 type: 'string',
                 description: 'Optional: specific scene to run (e.g., "scenes/TestLevel.tscn"). If omitted, runs main scene from project settings.',
+              },
+              headless: {
+                type: 'boolean',
+                description: 'Run without a window. Omit to follow the environment: headless where there is no display (CI), windowed where there is. A headless Godot renders nothing, so capture_screenshot, capture_viewport and the input injection tools need a windowed run.',
               },
             },
             required: ['projectPath'],

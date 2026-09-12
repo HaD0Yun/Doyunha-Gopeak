@@ -1919,6 +1919,28 @@ class GodotServer {
   }
 
   /**
+   * Whether to launch the game without a window.
+   *
+   * A headless Godot renders nothing, so capture_screenshot, capture_viewport and the input
+   * injection tools cannot work against a game started that way: they fail in the dummy
+   * texture storage, and run_project is the only way to start a game over MCP.
+   *
+   * Left to itself this follows the environment. CI is both the place that needs headless
+   * and the place with no display, so deciding on the display keeps every existing headless
+   * run headless while letting the visual tools work on a desktop with no configuration.
+   * An explicit true or false overrides it.
+   */
+  private resolveHeadless(requested: unknown): boolean {
+    if (typeof requested === 'boolean') {
+      return requested;
+    }
+    if (process.platform === 'win32' || process.platform === 'darwin') {
+      return false;
+    }
+    return !(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
+  }
+
+  /**
    * Handle the run_project tool
    * @param args Tool arguments
    */
@@ -1973,7 +1995,9 @@ class GodotServer {
         this.activeProcess.process.kill();
       }
 
-      const cmdArgs = ['--headless', '-d', '--path', args.projectPath];
+      const cmdArgs = this.resolveHeadless(args.headless)
+        ? ['--headless', '-d', '--path', args.projectPath]
+        : ['-d', '--path', args.projectPath];
       if (args.scene && this.validatePath(args.scene)) {
         this.logDebug(`Adding scene parameter: ${args.scene}`);
         cmdArgs.push(args.scene);
