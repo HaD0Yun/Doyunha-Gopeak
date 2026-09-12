@@ -215,9 +215,9 @@ async function main() {
       .filter((name) => !OPENAI_COMPATIBLE_TOOL_NAME_PATTERN.test(name));
 
     assert(
-      initialTools.length === 33,
-      'Default compact profile exposes exactly 33 tools',
-      `Expected 33 initial tools, got ${initialTools.length}`,
+      initialTools.length === 34,
+      'Default compact profile exposes exactly 34 tools',
+      `Expected 34 initial tools, got ${initialTools.length}`,
     );
     assert(
       invalidInitialToolNames.length === 0,
@@ -297,9 +297,9 @@ async function main() {
     const afterResetNames = new Set(afterResetTools.map((tool) => tool.name));
 
     assert(
-      afterResetTools.length === 33,
-      'After reset, compact profile exposes exactly 33 tools again',
-      `Expected 33 tools after reset, got ${afterResetTools.length}`,
+      afterResetTools.length === 34,
+      'After reset, compact profile exposes exactly 34 tools again',
+      `Expected 34 tools after reset, got ${afterResetTools.length}`,
     );
     assert(
       animationGroupTools.every((name) => !afterResetNames.has(sanitizeToolName(name))),

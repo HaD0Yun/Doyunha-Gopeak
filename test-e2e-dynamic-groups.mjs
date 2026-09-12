@@ -4,7 +4,7 @@ import process from 'node:process';
  * E2E Test: Dynamic Tool Group Activation
  * 
  * Tests the full MCP client flow with real tool execution:
- * 1. Initialize → List tools (33 compact)
+ * 1. Initialize → List tools (34 compact)
  * 2. tool_catalog search → auto-activation → re-list
  * 3. manage_tool_groups activate/deactivate/reset/status/list
  * 4. Actual tool execution after group activation
@@ -156,12 +156,12 @@ async function run() {
   proc.stdin.write(makeNotification('notifications/initialized'));
   await new Promise(r => setTimeout(r, 200));
 
-  // ── Phase 2: Initial tool list (33 compact) ──────────────
+  // ── Phase 2: Initial tool list (34 compact) ──────────────
   console.log('\n[Phase 2] Initial tool list verification');
   const { response: listRes1 } = await sendAndReceiveById(proc,
     makeRequest('tools/list', {}, 2), 2);
   const initialTools = listRes1.result.tools;
-  assert(initialTools.length === 33, `Initial tool count = ${initialTools.length} (expected 33)`);
+  assert(initialTools.length === 34, `Initial tool count = ${initialTools.length} (expected 34)`);
 
   const toolNames1 = initialTools.map(t => t.name);
   assert(toolNames1.includes(sanitizeToolName('tool.catalog')), 'sanitized tool.catalog is exposed');
@@ -194,7 +194,7 @@ async function run() {
   assert(toolNames2.includes(sanitizeToolName('create_animation_tree')), 'create_animation_tree now exposed');
   assert(toolNames2.includes(sanitizeToolName('add_animation_state')), 'add_animation_state now exposed');
   assert(toolNames2.includes(sanitizeToolName('connect_animation_states')), 'connect_animation_states now exposed');
-  assert(toolNames2.length === 33 + 5, `Tool count after animation activation = ${toolNames2.length} (expected 38)`);
+  assert(toolNames2.length === 34 + 5, `Tool count after animation activation = ${toolNames2.length} (expected 39)`);
 
   // ── Phase 4: Multi-group activation (catalog + manual) ────
   console.log('\n[Phase 4] Multi-group activation');
@@ -229,7 +229,7 @@ async function run() {
   assert(toolNames3.includes(sanitizeToolName('create_audio_bus')), 'create_audio_bus exposed (audio group)');
   assert(toolNames3.includes(sanitizeToolName('dap_set_breakpoint')), 'dap_set_breakpoint exposed (dap group)');
   assert(toolNames3.includes(sanitizeToolName('dap_get_stack_trace')), 'dap_get_stack_trace exposed (dap group)');
-  assert(toolNames3.length === 33 + 5 + 4 + 6, `Tool count with 3 groups = ${toolNames3.length} (expected 48)`);
+  assert(toolNames3.length === 34 + 5 + 4 + 6, `Tool count with 3 groups = ${toolNames3.length} (expected 49)`);
 
   // ── Phase 5: manage_tool_groups status & list ──────────────
   console.log('\n[Phase 5] manage_tool_groups status & list');
@@ -281,7 +281,7 @@ async function run() {
   assert(!toolNames4.includes(sanitizeToolName('create_audio_bus')), 'create_audio_bus hidden after deactivation');
   assert(toolNames4.includes(sanitizeToolName('create_animation')), 'create_animation still exposed');
   assert(toolNames4.includes(sanitizeToolName('dap_set_breakpoint')), 'dap_set_breakpoint still exposed');
-  assert(toolNames4.length === 33 + 5 + 6, `Tool count after audio deactivation = ${toolNames4.length} (expected 44)`);
+  assert(toolNames4.length === 34 + 5 + 6, `Tool count after audio deactivation = ${toolNames4.length} (expected 45)`);
 
   // ── Phase 7: Reset ──────────────────────────────────────────
   console.log('\n[Phase 7] Reset all groups');
@@ -299,7 +299,7 @@ async function run() {
 
   const { response: listRes5 } = await sendAndReceiveById(proc,
     makeRequest('tools/list', {}, 13), 13);
-  assert(listRes5.result.tools.length === 33, `After reset: ${listRes5.result.tools.length} tools (expected 33)`);
+  assert(listRes5.result.tools.length === 34, `After reset: ${listRes5.result.tools.length} tools (expected 34)`);
 
   // ── Phase 8: Actual tool execution after activation ─────────
   console.log('\n[Phase 8] Actual tool execution after group activation');

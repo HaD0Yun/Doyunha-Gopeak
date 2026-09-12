@@ -216,10 +216,10 @@ class GodotServer {
       this.toolExposureProfile = 'compact';
     }
 
-    const rawToolsPageSize = parseInt(process.env.GOPEAK_TOOLS_PAGE_SIZE || '33', 10);
+    const rawToolsPageSize = parseInt(process.env.GOPEAK_TOOLS_PAGE_SIZE || '34', 10);
     this.toolsListPageSize = Number.isFinite(rawToolsPageSize) && rawToolsPageSize > 0
       ? rawToolsPageSize
-      : 33;
+      : 34;
 
     // Initialize reverse parameter mappings
     for (const [snakeCase, camelCase] of Object.entries(this.parameterMappings)) {
