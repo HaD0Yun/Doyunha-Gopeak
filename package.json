@@ -54,10 +54,13 @@
     "typescript": "^5.3.3"
   },
   "overrides": {
-    "@hono/node-server": "^1.19.11",
-    "hono": "^4.12.30",
+    "@hono/node-server": "^1.19.15",
+    "body-parser": "^2.3.0",
+    "fast-uri": "^3.1.6",
+    "hono": "^4.12.34",
+    "ip-address": "^10.3.1",
     "path-to-regexp": "8.4.1",
-    "qs": "^6.15.3"
+    "qs": "^6.16.0"
   },
   "license": "MIT",
   "repository": {
