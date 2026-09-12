@@ -252,6 +252,21 @@ async function main() {
       `Expected activeGroups to include animation, got: ${JSON.stringify(catalogPayload.activeGroups)}`,
     );
 
+    const multiWordResponse = await client.send('tools/call', {
+      name: 'tool.catalog',
+      arguments: { query: 'inject mouse click viewport capture' },
+    });
+    const multiWordPayload = parseToolCallJson(multiWordResponse);
+    const multiWordNames = Array.isArray(multiWordPayload.tools)
+      ? multiWordPayload.tools.map((entry) => entry.tool)
+      : [];
+
+    assert(
+      multiWordNames.includes('inject_mouse_click') && multiWordNames.includes('capture_viewport'),
+      'tool_catalog answers a multi-word query with the tools it describes',
+      `Expected inject_mouse_click and capture_viewport, got: ${JSON.stringify(multiWordNames)}`,
+    );
+
     const postActivationTools = await listAllTools(client);
     const postActivationNames = new Set(postActivationTools.map((tool) => tool.name));
     const animationGroupTools = [

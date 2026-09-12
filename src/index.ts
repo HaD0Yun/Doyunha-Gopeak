@@ -1102,13 +1102,22 @@ class GodotServer {
     const reverseAlias = this.buildLegacyToCompactAliasMap();
     const toolToGroup = this.buildToolGroupLookup();
 
-    const filtered = tools.filter((tool) => {
-      if (!query) return true;
-      const haystack = `${tool.name} ${tool.description}`.toLowerCase();
-      return haystack.includes(query);
-    });
+    // Any term rather than the whole query as one substring. A caller describing what they want
+    // types several words, and no single tool name or description contains all of them: "inject
+    // mouse click viewport capture" returned nothing while "inject" returned four. Tools matching
+    // more terms come first, and the whole query appearing as written still wins.
+    const terms = query.split(/\s+/).filter((term) => term.length > 0);
+    const scored = tools
+      .map((tool) => {
+        const haystack = `${tool.name} ${tool.description}`.toLowerCase();
+        const hits = terms.filter((term) => haystack.includes(term)).length;
+        const exact = hits > 0 && terms.length > 1 && haystack.includes(query) ? terms.length : 0;
+        return { tool, score: terms.length === 0 ? 1 : hits + exact };
+      })
+      .filter((entry) => entry.score > 0)
+      .sort((left, right) => right.score - left.score);
 
-    const items = filtered.slice(0, limit).map((tool) => {
+    const items = scored.slice(0, limit).map(({ tool }) => {
       const groupInfo = toolToGroup.get(tool.name) || null;
       return {
         tool: tool.name,
