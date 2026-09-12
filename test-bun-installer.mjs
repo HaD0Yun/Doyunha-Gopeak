@@ -9,6 +9,7 @@ import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 
 const root = new URL('.', import.meta.url).pathname;
+const releaseVersion = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version;
 
 async function runInstaller({ version, validChecksum, installed = false, installedVersion = '2.3.8', failNextInstall = false, legacyArgs = [] }) {
   const home = await mkdtemp(join(tmpdir(), 'gopeak-installer-home-'));
@@ -279,14 +280,14 @@ try {
     GODOT_PATH: process.execPath,
     GOPEAK_BRIDGE_HOST: '127.0.0.1',
   };
-  const archivePath = resolve(root, 'dist', 'gopeak-2.3.9.tgz');
+  const archivePath = resolve(root, 'dist', `gopeak-${releaseVersion}.tgz`);
   const installation = await runProcess(process.execPath, ['add', '-g', archivePath], realEnv);
   assert.equal(installation.code, 0, installation.stderr);
   for (const binaryName of ['gopeak', 'godot-mcp']) {
     const binary = join(bunInstall, 'bin', binaryName);
     const versionResult = await runProcess(binary, ['version'], realEnv);
     assert.equal(versionResult.code, 0, versionResult.stderr);
-    assert.match(versionResult.stdout, /gopeak v2\.3\.9/);
+    assert.equal(versionResult.stdout.trim(), `gopeak v${releaseVersion}`);
     await initializeInstalledBin(binary, {
       ...realEnv,
       GOPEAK_BRIDGE_PORT: String(await reservePort()),

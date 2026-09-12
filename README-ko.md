@@ -15,17 +15,17 @@
 
 ### 실행
 ```bash
-bun add -g https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.3.9/gopeak-2.3.9.tgz
+bun add -g https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.4.0/gopeak-2.4.0.tgz
 gopeak
 ```
 
 가장 간단한 설치 방법입니다. 패키지 레지스트리 없이 GitHub Release의 번들 파일을 바로 설치합니다. 체크섬까지 검증하려면 아래 방법을 사용하세요.
 
 ```bash
-curl -fLO https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.3.9/gopeak-2.3.9.tgz
-curl -fLO https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.3.9/gopeak-2.3.9.tgz.sha256
-if command -v sha256sum >/dev/null 2>&1; then sha256sum -c gopeak-2.3.9.tgz.sha256; else shasum -a 256 -c gopeak-2.3.9.tgz.sha256; fi
-bun add -g "$PWD/gopeak-2.3.9.tgz"
+curl -fLO https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.4.0/gopeak-2.4.0.tgz
+curl -fLO https://github.com/HaD0Yun/Doyunha-Gopeak/releases/download/v2.4.0/gopeak-2.4.0.tgz.sha256
+if command -v sha256sum >/dev/null 2>&1; then sha256sum -c gopeak-2.4.0.tgz.sha256; else shasum -a 256 -c gopeak-2.4.0.tgz.sha256; fi
+bun add -g "$PWD/gopeak-2.4.0.tgz"
 gopeak
 ```
 
