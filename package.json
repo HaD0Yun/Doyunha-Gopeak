@@ -1,6 +1,6 @@
 {
   "name": "gopeak",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "packageManager": "bun@1.3.3",
   "mcpName": "io.github.HaD0Yun/gopeak",
   "description": "GoPeak — MCP server for trusted Godot 4 workflows with compact/dynamic tool profiles, setup-gated LSP/DAP/runtime integrations, and migration-safe legacy compatibility.",
@@ -18,15 +18,16 @@
   "scripts": {
     "build": "bun scripts/build-release.mjs",
     "typecheck": "bun node_modules/typescript/lib/tsc.js --noEmit",
-    "test": "bun scripts/smoke-test.mjs && bun test-regressions.mjs && bun test-godot-detection.mjs",
-    "smoke": "bun scripts/smoke-test.mjs && bun test-regressions.mjs && bun test-godot-detection.mjs",
+    "test": "bun scripts/smoke-test.mjs && bun test-regressions.mjs && bun test-godot-detection.mjs && bun test-shell-injection.mjs",
+    "smoke": "bun scripts/smoke-test.mjs && bun test-regressions.mjs && bun test-godot-detection.mjs && bun test-shell-injection.mjs",
     "test:smoke": "bun scripts/smoke-test.mjs",
     "test:integration": "bun test-bridge.mjs",
     "test:dynamic-groups": "bun test-dynamic-groups.mjs",
     "test:docs": "bun test-readme-localization-consistency.mjs && bun test-docs-package-policy.mjs",
     "test:regressions": "bun test-regressions.mjs",
     "test:detection": "bun test-godot-detection.mjs",
-    "test:ci": "bun scripts/smoke-test.mjs && bun test-regressions.mjs && bun test-godot-detection.mjs",
+    "test:injection": "bun test-shell-injection.mjs",
+    "test:ci": "bun scripts/smoke-test.mjs && bun test-regressions.mjs && bun test-godot-detection.mjs && bun test-shell-injection.mjs",
     "ci": "bun run build && bun run typecheck && bun run test:ci",
     "watch": "bun node_modules/typescript/lib/tsc.js --watch",
     "pack": "bun run release:pack",
@@ -43,7 +44,7 @@
     "bun": ">=1.3.3"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "fs-extra": "^11.2.0",
     "ws": "^8.21.0"
   },
@@ -54,13 +55,15 @@
     "typescript": "^5.3.3"
   },
   "overrides": {
-    "@hono/node-server": "^1.19.15",
-    "body-parser": "^2.3.0",
-    "fast-uri": "^3.1.6",
-    "hono": "^4.12.34",
-    "ip-address": "^10.3.1",
+    "@hono/node-server": "^2.1.8",
+    "body-parser": "^2.4.0",
+    "fast-uri": "^3.1.9",
+    "hono": "^4.13.18",
+    "ip-address": "^10.7.6",
     "path-to-regexp": "8.4.1",
-    "qs": "^6.16.0"
+    "qs": "^6.17.1",
+    "proxy-addr": "^2.0.8",
+    "zod": "^4.6.7"
   },
   "license": "MIT",
   "repository": {

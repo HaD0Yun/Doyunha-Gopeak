@@ -10,7 +10,7 @@
  */
 
 import { readFileSync, readdirSync, statSync, existsSync, writeFileSync, mkdirSync } from 'fs';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { join, basename, dirname, relative } from 'path';
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -204,7 +204,7 @@ export function mapProject(
   try {
     const gitDir = join(projectPath, '.git');
     if (existsSync(gitDir)) {
-      const raw = execSync('git status --porcelain', {
+      const raw = execFileSync('git', ['status', '--porcelain'], {
         cwd: projectPath,
         encoding: 'utf-8',
         timeout: 5000,

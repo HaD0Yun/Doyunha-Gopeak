@@ -1,9 +1,10 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
-const execAsync = promisify(exec);
+// Security: no shell. Arguments are passed to Godot verbatim (CWE-78).
+const execFileAsync = promisify(execFile);
 
 export interface ExportProjectParams {
   projectPath: string;
@@ -34,12 +35,22 @@ export async function exportProject(params: ExportProjectParams, godotPath: stri
   const absoluteOutputPath = join(params.projectPath, params.outputPath);
   const flag = params.debug ? '--export-debug' : '--export-release';
   
-  // Construct command
-  // "godot" --headless --path "project/path" --export-release "Windows Desktop" "builds/game.exe"
-  const cmd = `"${godotPath}" --headless --path "${params.projectPath}" ${flag} "${params.preset}" "${absoluteOutputPath}"`;
-  
+  // The preset must be one of the names defined in export_presets.cfg.
+  const presetNames = listExportPresets(params.projectPath).map((p) => p.name);
+  if (typeof params.preset !== 'string' || !presetNames.includes(params.preset)) {
+    return {
+      success: false,
+      outputPath: absoluteOutputPath,
+      output: '',
+      errors: [`Unknown export preset: ${String(params.preset)}`],
+    };
+  }
+
+  // godot --headless --path <project> --export-release <preset> <output>
+  const exportArgs = ['--headless', '--path', params.projectPath, flag, params.preset, absoluteOutputPath];
+
   try {
-    const { stdout, stderr } = await execAsync(cmd);
+    const { stdout, stderr } = await execFileAsync(godotPath, exportArgs);
     
     // Check if output file was created
     if (!existsSync(absoluteOutputPath)) {

@@ -4,7 +4,7 @@
 
 ## Current baseline (September 2026)
 
-- Package version: `2.4.0`
+- Package version: `2.4.1`
 - Distribution: bundled versioned GitHub Release tarball + SHA-256 checksum + provenance attestation, installed globally with Bun without install-time registry resolution; repository metadata in `server.json`
 - Default tool exposure: `compact` profile
 - Capability surface: 34 core tools + 22 dynamic groups (110+ tools total)
