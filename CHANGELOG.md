@@ -4,6 +4,16 @@ All notable changes to GoPeak (godot-mcp) will be documented in this file.
 
 ## [Unreleased]
 
+## [2.4.1] - 2026-11-13
+
+### Security
+- Fixed shell command injection through tool arguments (CWE-78, same class as CVE-2026-25546 in upstream godot-mcp). GoPeak built Godot command lines as strings and ran them through a shell, so shell syntax such as `$(...)` inside `projectPath`, `preset`, or `outputPath` was executed as the MCP server user. Godot and git now start without a shell and receive every value as a literal argument. All earlier versions are affected; update to 2.4.1. Reported by Mohamad Njadat (@njadtmohmad).
+- `export_project` rejects a preset name that is not defined in `export_presets.cfg` before starting Godot.
+- Raised `@modelcontextprotocol/sdk` to 1.32.2 and the production dependency overrides so `bun audit --prod` passes again.
+
+### Changed
+- Distribution is unchanged: install the versioned GitHub Release tarball globally with Bun (`bun add -g "$PWD/gopeak-2.4.1.tgz"`) after verifying its SHA-256 checksum.
+
 ## [2.4.0] - 2026-09-12
 
 ### Added
