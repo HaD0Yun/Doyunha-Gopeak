@@ -14,7 +14,7 @@ import { tmpdir } from 'os';
 import { spawn } from 'child_process';
 import { createConnection as createTcpConnection } from 'node:net';
 import { promisify } from 'util';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -32,6 +32,7 @@ import { setupResourceHandlers } from './resources.js';
 import { GodotLSPClient, handleLSPTool } from './lsp_client.js';
 import { GodotDAPClient, handleDAPTool } from './dap_client.js';
 import { mapProject } from './gdscript_parser.js';
+import { listExportPresets } from './project_utils.js';
 import { serveVisualization, setProjectPath, stopVisualizationServer } from './visualizer-server.js';
 import { GodotBridge, getDefaultBridge } from './godot-bridge.js';
 import { getPrompt, listPrompts } from './prompts.js';
@@ -40,7 +41,10 @@ import { CORE_TOOL_GROUPS, TOOL_GROUPS } from './tool-groups.js';
 import { DEBUG_MODE, GODOT_DEBUG_MODE_DEFAULT, SERVER_VERSION } from './server-version.js';
 import type { GodotProcess, GodotServerConfig, MCPToolDefinition, OperationParams } from './server-types.js';
 
-const execAsync = promisify(exec);
+// Security: never run Godot through a shell. execFile passes each argument
+// verbatim to the process, so tool arguments such as projectPath or preset
+// cannot be interpreted as shell syntax (CWE-78, CVE-2026-25546 class).
+const execFileAsync = promisify(execFile);
 
 /**
  * Scan a directory for Godot executable binaries.
@@ -380,8 +384,7 @@ class GodotServer {
       }
 
       // Try to execute Godot with --version flag
-      const command = path === 'godot' ? 'godot --version' : `"${path}" --version`;
-      await execAsync(command);
+      await execFileAsync(path, ['--version']);
 
       this.logDebug(`Valid Godot path: ${path}`);
       this.validatedPaths.set(path, true);
@@ -1373,41 +1376,35 @@ class GodotServer {
       const paramsFilePath = join(paramsDir, `${operation}.json`);
       writeFileSync(paramsFilePath, paramsJson, 'utf8');
 
-      // Escape the params file reference for the current shell.
       const paramsFileArg = `@file:${paramsFilePath}`;
-      const escapedParams = paramsFileArg.replace(/'/g, "'\\''");
-      const isWindows = process.platform === 'win32';
-      const quotedParams = isWindows
-        ? `\"${paramsFileArg.replace(/\"/g, '\\"')}\"`
-        : `'${escapedParams}'`;
 
 
       // Add debug arguments if debug mode is enabled
       const debugArgs = this.godotDebugMode ? ['--debug-godot'] : [];
 
-      // Construct the command with the operation and JSON parameters
-      const cmd = [
-        `"${this.godotPath}"`,
+      // Build an argument array and run Godot without a shell, so projectPath
+      // and every other value reach Godot as literal arguments.
+      const godotArgs = [
         '--headless',
         '--path',
-        `"${projectPath}"`,
+        projectPath,
         '--script',
-        `"${this.operationsScriptPath}"`,
+        this.operationsScriptPath,
         operation,
-        quotedParams, // Pass the JSON string as a single argument
+        paramsFileArg, // Reference to the JSON params file, as a single argument
         ...debugArgs,
-      ].join(' ');
+      ];
 
-      this.logDebug(`Command: ${cmd}`);
+      this.logDebug(`Command: ${this.godotPath} ${JSON.stringify(godotArgs)}`);
 
       try {
-        const { stdout, stderr } = await execAsync(cmd);
+        const { stdout, stderr } = await execFileAsync(this.godotPath, godotArgs);
         return { stdout, stderr: this.sanitizeGodotStderr(stderr) };
       } finally {
         rmSync(paramsDir, { recursive: true, force: true });
       }
     } catch (error: unknown) {
-      // If execAsync throws, it still contains stdout/stderr
+      // If execFileAsync throws, it still contains stdout/stderr
       if (error instanceof Error && 'stdout' in error && 'stderr' in error) {
         const execError = error as Error & { stdout: string; stderr: string };
         return {
@@ -2227,7 +2224,7 @@ class GodotServer {
       }
 
       this.logDebug('Getting Godot version');
-      const { stdout } = await execAsync(`"${this.godotPath}" --version`);
+      const { stdout } = await execFileAsync(this.godotPath, ['--version']);
       return {
         content: [
           {
@@ -2414,7 +2411,7 @@ class GodotServer {
   
       // Get Godot version
       const execOptions = { timeout: 10000 }; // 10 second timeout
-      const { stdout } = await execAsync(`"${this.godotPath}" --version`, execOptions);
+      const { stdout } = await execFileAsync(this.godotPath, ['--version'], execOptions);
   
       // Get project structure using the recursive method
       const projectStructure = await this.getProjectStructureAsync(args.projectPath);
@@ -3748,7 +3745,7 @@ class GodotServer {
       }
 
       // Get Godot version to check if UIDs are supported
-      const { stdout: versionOutput } = await execAsync(`"${this.godotPath}" --version`);
+      const { stdout: versionOutput } = await execFileAsync(this.godotPath, ['--version']);
       const version = versionOutput.trim();
 
       if (!this.isGodot44OrLater(version)) {
@@ -3848,7 +3845,7 @@ class GodotServer {
       }
 
       // Get Godot version to check if UIDs are supported
-      const { stdout: versionOutput } = await execAsync(`"${this.godotPath}" --version`);
+      const { stdout: versionOutput } = await execFileAsync(this.godotPath, ['--version']);
       const version = versionOutput.trim();
 
       if (!this.isGodot44OrLater(version)) {
@@ -4627,12 +4624,26 @@ class GodotServer {
         }
       }
 
+      // The preset must be one of the names defined in export_presets.cfg.
+      const presetNames = listExportPresets(args.projectPath).map((p) => p.name);
+      if (typeof args.preset !== 'string' || !presetNames.includes(args.preset)) {
+        return this.createErrorResponse(
+          `Unknown export preset: ${String(args.preset)}`,
+          [
+            presetNames.length > 0
+              ? `Available presets: ${presetNames.join(', ')}`
+              : 'No presets found. Create export presets in the Godot editor (export_presets.cfg) first',
+          ]
+        );
+      }
+
       const exportFlag = args.debug ? '--export-debug' : '--export-release';
-      const cmd = `"${this.godotPath}" --headless --path "${args.projectPath}" ${exportFlag} "${args.preset}" "${args.outputPath}"`;
-      
-      this.logDebug(`Export command: ${cmd}`);
-      
-      const { stdout, stderr } = await execAsync(cmd, { timeout: 300000 }); // 5 minute timeout for exports
+      const exportArgs = ['--headless', '--path', args.projectPath, exportFlag, args.preset, args.outputPath];
+
+      this.logDebug(`Export command: ${this.godotPath} ${JSON.stringify(exportArgs)}`);
+
+      // No shell: every value is passed to Godot as a literal argument.
+      const { stdout, stderr } = await execFileAsync(this.godotPath, exportArgs, { timeout: 300000 }); // 5 minute timeout for exports
 
       if (stderr && (stderr.includes('ERROR') || stderr.includes('Invalid preset'))) {
         return this.createErrorResponse(

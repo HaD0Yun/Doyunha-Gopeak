@@ -1,4 +1,4 @@
-import { exec, execSync } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -187,9 +187,10 @@ function parseDiffHunks(diffText: string): {
   return { hunks, additions, deletions };
 }
 
-function runDiffCommand(command: string, cwd: string): string {
+// Runs git without a shell; each argument is passed verbatim.
+function runGit(args: string[], cwd: string): string {
   try {
-    return execSync(command, { cwd, encoding: 'utf-8', timeout: 5000 });
+    return execFileSync('git', args, { cwd, encoding: 'utf-8', timeout: 5000 });
   } catch (error) {
     const stdout = (error as { stdout?: string | Buffer }).stdout;
     if (typeof stdout === 'string') {
@@ -200,10 +201,6 @@ function runDiffCommand(command: string, cwd: string): string {
     }
     throw error;
   }
-}
-
-function quoteForShell(value: string): string {
-  return `"${value.replace(/[\\"$`]/g, '\\$&')}"`;
 }
 
 interface ActionEntry {
@@ -255,7 +252,7 @@ function readGitSnapshot(projectPath: string): Map<string, GitStatusKind> | null
   }
 
   try {
-    const raw = runDiffCommand('git status --porcelain', projectPath);
+    const raw = runGit(['status', '--porcelain'], projectPath);
     const snapshot = new Map<string, GitStatusKind>();
 
     for (const line of raw.split('\n')) {
@@ -342,18 +339,13 @@ const COMMAND_MAP: Record<string, CommandHandler> = {
       }
 
       const absolutePath = resolvePath(pp, requestPath);
-      const quotedAbsolutePath = quoteForShell(absolutePath);
-      let diffText = runDiffCommand(`git diff HEAD -- ${quotedAbsolutePath}`, pp);
+      let diffText = runGit(['diff', 'HEAD', '--', absolutePath], pp);
 
       if (diffText.trim() === '' && fs.existsSync(absolutePath)) {
         const relPath = path.relative(pp, absolutePath);
-        const quotedRelPath = quoteForShell(relPath);
-        const untracked = runDiffCommand(
-          `git ls-files --others --exclude-standard -- ${quotedRelPath}`,
-          pp
-        );
+        const untracked = runGit(['ls-files', '--others', '--exclude-standard', '--', relPath], pp);
         if (untracked.trim() !== '') {
-          diffText = runDiffCommand(`git diff --no-index /dev/null ${quotedAbsolutePath}`, pp);
+          diffText = runGit(['diff', '--no-index', '--', '/dev/null', absolutePath], pp);
         }
       }
 
@@ -449,10 +441,12 @@ function broadcastToVisualizer(message: Record<string, unknown>): void {
 }
 
 function openBrowser(url: string): void {
-  const cmd = process.platform === 'darwin' ? 'open'
-            : process.platform === 'win32' ? 'start'
-            : 'xdg-open';
-  exec(`${cmd} ${url}`, (err) => {
+  // No shell on macOS/Linux. Windows needs cmd for the "start" builtin; the
+  // URL is passed as its own argument and is built locally (localhost + port).
+  const [cmd, cmdArgs] = process.platform === 'darwin' ? ['open', [url]]
+                       : process.platform === 'win32' ? ['cmd', ['/c', 'start', '""', url]]
+                       : ['xdg-open', [url]];
+  execFile(cmd as string, cmdArgs as string[], (err) => {
     if (err) {
       console.error(`[visualizer] Could not open browser: ${err.message}`);
     }
